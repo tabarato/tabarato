@@ -1,9 +1,14 @@
-from web_scraper.bistek import BistekScraper
-
-
-
-
+from etl.bistek import BistekETL
+from etl.angeloni import AngeloniETL
 
 
 if __name__ == "__main__":
-    BistekScraper.scrap_market()
+    processes = [
+        BistekETL(),
+        AngeloniETL()
+    ]
+
+    for process in processes:
+        data = process.extract()
+        transformed_data = process.transform(data)
+        process.load(transformed_data)
