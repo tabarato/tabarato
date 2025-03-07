@@ -1,0 +1,296 @@
+[
+    {
+        "productName":"Refrigerante Guaraná Antarctica Zero 2L",
+        "brand":"Antarctica",
+        "productTitle":"Refrigerante Guaraná Zero",
+        "measure":"ml",
+        "weight":2000
+    },
+    {
+        "productName":"Refrigerante Guaraná Antarctica 2L",
+        "brand":"Antarctica",
+        "productTitle":"Refrigerante Guaraná",
+        "measure":"ml",
+        "weight":2000
+    },
+    {
+        "productName":"Refrigerante Guaraná Antarctica Zero 350ml Lata",
+        "brand":"Antarctica",
+        "productTitle":"Refrigerante Guaraná Zero Lata",
+        "measure":"ml",
+        "weight":350
+    },
+    {
+        "productName":"Cerveja Budweiser 350ml Lata",
+        "brand":"Budweiser",
+        "productTitle":"Cerveja Lata",
+        "measure":"ml",
+        "weight":350
+    },
+    {
+        "productName":"Refrigerante Guaraná Antarctica 350ml Lata",
+        "brand":"Antarctica",
+        "productTitle":"Refrigerante Guaraná Lata",
+        "measure":"ml",
+        "weight":350
+    },
+    {
+        "productName":"Creme Dental Sorriso Tripla Limpeza Completa 120g",
+        "brand":"Sorriso",
+        "productTitle":"Creme Dental Tripla Limpeza Completa",
+        "measure":"g",
+        "weight":120
+    },
+    {
+        "productName":"Cerveja Spaten Puro Malte 350ml Lata",
+        "brand":"Spaten",
+        "productTitle":"Cerveja Puro Malte Lata",
+        "measure":"ml",
+        "weight":350
+    },
+    {
+        "productName":"Cerveja Brahma Lata 350ml",
+        "brand":"Brahma",
+        "productTitle":"Cerveja Lata",
+        "measure":"ml",
+        "weight":350
+    },
+    {
+        "productName":"Desodorante Antitranspirante Aerossol Rexona Men Active Dry 72h 250ml Leve Mais Pague Menos",
+        "brand":"Rexona",
+        "productTitle":"Desodorante Antitranspirante Aerossol Men Active Dry 72h Leve Mais Pague Menos",
+        "measure":"ml",
+        "weight":250
+    },
+    {
+        "productName":"Escova Dental Colgate Zig Zag Carvão Com 4 Unidades",
+        "brand":"Colgate",
+        "productTitle":"Escova Dental Zig Zag Carvão Com 4 Unidades",
+        "measure":"UN",
+        "weight":4
+    },
+    {
+        "productName":"Desodorante Aero Dove Original Leve Mais Pague Menos 250ml",
+        "brand":"Dove",
+        "productTitle":"Desodorante Aero Original Leve Mais Pague Menos",
+        "measure":"ml",
+        "weight":250
+    },
+    {
+        "productName":"Refrigerante 500ml H2oh! Limão",
+        "brand":"H2oh",
+        "productTitle":"Refrigerante ! Limão",
+        "measure":"ml",
+        "weight":500
+    },
+    {
+        "productName":"Macarrao Arroz Barilla 500g Espag.S\/Glut",
+        "brand":"Barilla",
+        "productTitle":"Macarrao Arroz Espag.S\/Glut",
+        "measure":"g",
+        "weight":500
+    },
+    {
+        "productName":"Cerveja Skol 269ml Beats Senses Lata",
+        "brand":"Skol",
+        "productTitle":"Cerveja Beats Senses Lata",
+        "measure":"ml",
+        "weight":269
+    },
+    {
+        "productName":"Refrigerante H2oh 500ml Limoneto",
+        "brand":"H2oh",
+        "productTitle":"Refrigerante Limoneto",
+        "measure":"ml",
+        "weight":500
+    },
+    {
+        "productName":"Sabonete Líquido Palmolive Naturals Óleo Nutritivo 200Ml Refil",
+        "brand":"Bistek",
+        "productTitle":"Sabonete Líquido Palmolive Naturals Óleo Nutritivo Refil",
+        "measure":"Ml",
+        "weight":200
+    },
+    {
+        "productName":"Bebida Mista Beats 269ml Caipirinha Lt",
+        "brand":"Skol",
+        "productTitle":"Bebida Mista Beats Caipirinha Lt",
+        "measure":"ml",
+        "weight":269
+    },
+    {
+        "productName":"Desodorante Aero Rexona 250ml An+In L+P-",
+        "brand":"Rexona",
+        "productTitle":"Desodorante Aero An+In L+P-",
+        "measure":"ml",
+        "weight":250
+    },
+    {
+        "productName":"Bebida Mista Beats 269ml Gt Lt",
+        "brand":"Skol",
+        "productTitle":"Bebida Mista Beats Gt Lt",
+        "measure":"ml",
+        "weight":269
+    },
+    {
+        "productName":"Desodorante Aero Rexona 250ml Pow.D.L+P-",
+        "brand":"Rexona",
+        "productTitle":"Desodorante Aero Pow.D.L+P-",
+        "measure":"ml",
+        "weight":250
+    },
+    {
+        "productName":"Creme Dental Sorriso 120g Dentes Brancos",
+        "brand":"Sorriso",
+        "productTitle":"Creme Dental Dentes Brancos",
+        "measure":"g",
+        "weight":120
+    },
+    {
+        "productName":"Desodorante Aero Rexona 250ml Antib+Inv",
+        "brand":"Rexona",
+        "productTitle":"Desodorante Aero Antib+Inv",
+        "measure":"ml",
+        "weight":250
+    },
+    {
+        "productName":"Shampoo Palmolive 350ml 2x1 A.Caspa\/Qued",
+        "brand":"Palmolive",
+        "productTitle":"Shampoo 2x1 A.Caspa\/Qued",
+        "measure":"ml",
+        "weight":350
+    },
+    {
+        "productName":"Bebida Mista Beats 269ml Senses Ln",
+        "brand":"Skol",
+        "productTitle":"Bebida Mista Beats Senses Ln",
+        "measure":"ml",
+        "weight":269
+    },
+    {
+        "productName":"Desodorante Aero Rexona 250ml M.V8 L+P-",
+        "brand":"Rexona",
+        "productTitle":"Desodorante Aero M.V8 L+P-",
+        "measure":"ml",
+        "weight":250
+    },
+    {
+        "productName":"Desodorante Aero Rexona 250ml Inv.L+P-",
+        "brand":"Rexona",
+        "productTitle":"Desodorante Aero Inv.L+P-",
+        "measure":"ml",
+        "weight":250
+    },
+    {
+        "productName":"Desodorante Aero Dove 250ml Inv.Dry L+P-",
+        "brand":"Dove",
+        "productTitle":"Desodorante Aero Inv.Dry L+P-",
+        "measure":"ml",
+        "weight":250
+    },
+    {
+        "productName":"Sabonete Liq.Protex 250ml Erva Doce",
+        "brand":"Protex",
+        "productTitle":"Sabonete Liq. Erva Doce",
+        "measure":"ml",
+        "weight":250
+    },
+    {
+        "productName":"Bebida Mista Beats 269ml Caipirinha Ln",
+        "brand":"Skol",
+        "productTitle":"Bebida Mista Beats Caipirinha Ln",
+        "measure":"ml",
+        "weight":269
+    },
+    {
+        "productName":"Desodorante Aero Rexona 250ml Cot.D.L+P-",
+        "brand":"Rexona",
+        "productTitle":"Desodorante Aero Cot.D.L+P-",
+        "measure":"ml",
+        "weight":250
+    },
+    {
+        "productName":"Escova Dental Colgate Tandy Ex.Macia C\/2",
+        "brand":"Colgate",
+        "productTitle":"Escova Dental Tandy Ex.Macia C\/2",
+        "measure":"UN",
+        "weight":2
+    },
+    {
+        "productName":"Desodorante Aero Dove 250ml Men C.T.L+P-",
+        "brand":"Dove",
+        "productTitle":"Desodorante Aero Men C.T.L+P-",
+        "measure":"ml",
+        "weight":250
+    },
+    {
+        "productName":"Bebida Mista Beats 269ml Red Mix Ln",
+        "brand":"Skol",
+        "productTitle":"Bebida Mista Beats Red Mix Ln",
+        "measure":"ml",
+        "weight":269
+    },
+    {
+        "productName":"Bebida Mista Beats 269ml Tropical Ln",
+        "brand":"Beats",
+        "productTitle":"Bebida Mista Tropical Ln",
+        "measure":"ml",
+        "weight":269
+    },
+    {
+        "productName":"Desodorante Aero Rexona 250ml M.Inv.L+P-",
+        "brand":"Rexona",
+        "productTitle":"Desodorante Aero M.Inv.L+P-",
+        "measure":"ml",
+        "weight":250
+    },
+    {
+        "productName":"Escova Dental Colgate Colors C\/5",
+        "brand":"Colgate",
+        "productTitle":"Escova Dental Colors C\/5",
+        "measure":"UN",
+        "weight":5
+    },
+    {
+        "productName":"Creme Dental Colgate 70g Lum.White Cafe",
+        "brand":"Colgate",
+        "productTitle":"Creme Dental Lum.White Cafe",
+        "measure":"g",
+        "weight":70
+    },
+    {
+        "productName":"Gel Dental Colgate 90g Natur. Ext.Car.Me",
+        "brand":"Colgate",
+        "productTitle":"Gel Dental Natur. Ext.Car.Me",
+        "measure":"g",
+        "weight":90
+    },
+    {
+        "productName":"Creme Dental Colgate 140g Lu.White Carv",
+        "brand":"Colgate",
+        "productTitle":"Creme Dental Lu.White Carv",
+        "measure":"g",
+        "weight":140
+    },
+    {
+        "productName":"Enxaguante Bucal Colgate 1l Fresh Mint",
+        "brand":"Colgate",
+        "productTitle":"Enxaguante Bucal Fresh Mint",
+        "measure":"ml",
+        "weight":1000
+    },
+    {
+        "productName":"Bebida Mista Beats 269ml Gt Ln",
+        "brand":"Skol",
+        "productTitle":"Bebida Mista Beats Gt Ln",
+        "measure":"ml",
+        "weight":269
+    },
+    {
+        "productName":"Creme Dental Colgate 70g Lum.White Vinho",
+        "brand":"Colgate",
+        "productTitle":"Creme Dental Lum.White Vinho",
+        "measure":"g",
+        "weight":70
+    }
+]

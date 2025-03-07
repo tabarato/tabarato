@@ -1,6 +1,6 @@
-from etl.etl import ETL
-from etl.utils.dataframe_utils import normalize_measurement, normalize_product_name
-from etl.utils.string_utils import tokenize
+from core.etl import ETL
+from core.utils.dataframe_utils import normalize_measurement, normalize_product_name
+from core.utils.string_utils import tokenize
 import hrequests
 import os
 import re
@@ -8,6 +8,7 @@ import itertools
 import time
 import json
 import random
+import pandas as pd
 from dotenv import load_dotenv
 from pandas import DataFrame
 
@@ -40,8 +41,9 @@ class BistekETL(ETL):
         """Collect data from the product in JSON format."""
         pass
 
-    def get_catalog_pages(self, session: hrequests.Session):
-        response = session.get(self.CATALOG_URL)    
+    @classmethod
+    def get_catalog_pages(cls, session: hrequests.Session):
+        response = session.get(cls.CATALOG_URL)    
         pfo = response.html.find("ul", class_="bistek-custom-apps-0-x-pagination bistek-custom-apps-0-x-pagination--start")
         # pages = pfo.find_all("li", class_="bistek-custom-apps-0-x-paginationItem bistek-custom-apps-0-x-paginationItem--page")
         page_links = pfo.absolute_links
@@ -53,20 +55,23 @@ class BistekETL(ETL):
         max_page = max(page_numbers) if page_numbers else None
         return max_page
 
-    def get_objects_id(self, session: hrequests.Session, url):
+    @classmethod
+    def get_objects_id(cls, session: hrequests.Session, url):
         req_object = session.get(url)
         json_element = req_object.html.find_all('script', type='application/ld+json')[-1]
         json_obj = json.loads(json_element.text)
         
-        url_ids = [self.PRODUCT_API_URL.format(product['item']['sku']) for product in json_obj['itemListElement']]
+        url_ids = [cls.PRODUCT_API_URL.format(product['item']['sku']) for product in json_obj['itemListElement']]
         return url_ids
 
-    def get_objects_json_data(session: hrequests.Session, url):
+    @classmethod
+    def get_objects_json_data(cls, session: hrequests.Session, url):
         req_object = session.get(url)
         print("URL: ", url, " Status: ", req_object.status_code)
         return req_object.json()[0]
 
-    def extract(self) -> None:
+    @classmethod
+    def extract(cls) -> DataFrame:
         """Collect data from Bistek Online Market"""
         # try:
         #     with hrequests.Session() as session:
@@ -77,37 +82,42 @@ class BistekETL(ETL):
         #     raise e
 
         with hrequests.Session() as session:
-            pages = self.get_catalog_pages(session)
-            urls = [self.PAGE_CATALOG_URL.format(page) for page in range(1, pages+1)]
-            url_ids = [self.get_objects_id(session, url) for url in urls]
+            pages = cls.get_catalog_pages(session)
+            urls = [cls.PAGE_CATALOG_URL.format(page) for page in range(1, pages+1)]
+            url_ids = [cls.get_objects_id(session, url) for url in urls]
             url_ids = list(itertools.chain.from_iterable(url_ids))
             
             collected_data = []
             for url in url_ids:
-                json_data = self.get_objects_json_data(session, url)
+                json_data = cls.get_objects_json_data(session, url)
                 collected_data.append(json_data)
                 time.sleep(random.randint(1, 5))
             
-            return collected_data
+            df = pd.DataFrame(collected_data)
 
-    def transform(self, data) -> DataFrame:
-        df = DataFrame(data)
+            df.drop(["clusterHighlights", "searchableClusters"], axis=1, inplace=True)
 
-        brand_mapping = {brand: idx for idx, brand in enumerate(df["brand"].unique())}
-        df["brand_encoded"] = df["brand"].map(brand_mapping)
+            return df
+
+    @classmethod
+    def transform(cls, ti) -> DataFrame:
+        df = ti.xcom_pull(task_ids = "extract_task")
+
+        # brand_mapping = {brand: idx for idx, brand in enumerate(df["brand"].unique())}
+        # df["brand_encoded"] = df["brand"].map(brand_mapping)
 
         df[["measure", "weight"]] = df.apply(normalize_measurement, axis=1)
+        df["weight"] = df["weight"].astype(int)
 
-        df["normalized_product_name"] = df.apply(normalize_product_name, axis=1)
-        df["tokens"] = df["normalized_product_name"].apply(tokenize)
+        df["productTitle"] = df.apply(normalize_product_name, axis=1)
+        # df["tokens"] = df["normalized_product_name"].apply(tokenize)
 
         df.drop(["productId", "brandId", "brandImageUrl",
                 "productReference", "productReferenceCode", "categoryId", 
-                "metaTagDescription", "releaseDate", "clusterHighlights",
-                "productClusters", "searchableClusters", "categories",
-                "categoriesIds", "link", "Peso Produto",
-                "Unidade de Medida", "Especificações", "allSpecifications",
-                "allSpecificationsGroups", "description", "items",
-                "productTitle", "linkText"], axis=1, inplace=True)
+                "metaTagDescription", "releaseDate", "productClusters",
+                "categories", "categoriesIds", "link",
+                "Peso Produto", "Unidade de Medida", "Especificações", 
+                "allSpecifications", "allSpecificationsGroups", "description", 
+                "items", "linkText"], axis=1, inplace=True)
         
         return df

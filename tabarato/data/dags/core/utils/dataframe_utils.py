@@ -14,9 +14,9 @@ def normalize_product_name(row):
         if measure == "g":
             measure = "KG"
         else:
-            measure = "LT"
+            measure = "L"
 
-        measurement_text = str(weight / 1000) + measure
+        measurement_text = str(int(weight / 1000)) + measure
 
     product_name = re.sub(re.escape(brand), "", product_name, flags=re.IGNORECASE)
 
@@ -29,11 +29,21 @@ def normalize_product_name(row):
 def normalize_measurement(row):
     raw_weight = row["Peso Produto"]
     raw_measure = row["Unidade de Medida"]
-    
-    weight = float(raw_weight[0]) if raw_weight and isinstance(raw_weight, list) else float(raw_weight)
-    measure = str(raw_measure[0]) if raw_measure and isinstance(raw_measure, list) else str(raw_measure)
 
-    if math.isnan(weight):
+    def get_list(value):
+        try:
+            return list(value)
+        except:
+            return None
+    
+    try:
+        weight = float(get_list(raw_weight)[0]) if raw_weight and get_list(raw_weight) else float(raw_weight)
+        measure = str(get_list(raw_measure)[0]) if raw_measure and get_list(raw_measure) else str(raw_measure)
+    except TypeError:
+        weight = None
+        measure = None
+
+    if not weight or math.isnan(weight):
         product_name = row["productName"]
         match = re.search(r"(\d+)\s*(ml|g|kg|l|lt)", product_name, re.IGNORECASE)
 

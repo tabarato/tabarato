@@ -1,4 +1,4 @@
-from etl.etl import ETL
+from core.etl import ETL
 
 class AngeloniETL(ETL):
     products_url = []
