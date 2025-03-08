@@ -1,4 +1,6 @@
-from core.etl import ETL
+from core.etl import StoreETL
 
-class AngeloniETL(ETL):
-    products_url = []
+class AngeloniETL(StoreETL):
+    @classmethod
+    def slug(cls) -> str:
+        return "angeloni"
