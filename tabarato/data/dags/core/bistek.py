@@ -1,6 +1,5 @@
-from core.etl import ETL
+from core.etl import StoreETL
 from core.utils.dataframe_utils import normalize_measurement, normalize_product_name
-from core.utils.string_utils import tokenize
 import hrequests
 import os
 import re
@@ -14,7 +13,7 @@ from pandas import DataFrame
 
 load_dotenv()
 
-class BistekETL(ETL):
+class BistekETL(StoreETL):
     products_url = []
     main_page_url = os.getenv("BISTEK_MAIN_PAGE_URL")
     CATALOG_URL = "https://www.bistek.com.br/exclusivo-site?order=OrderByTopSaleDESC"
@@ -71,6 +70,10 @@ class BistekETL(ETL):
         return req_object.json()[0]
 
     @classmethod
+    def slug(cls) -> str:
+        return "bistek"
+
+    @classmethod
     def extract(cls) -> DataFrame:
         """Collect data from Bistek Online Market"""
         # try:
@@ -103,14 +106,10 @@ class BistekETL(ETL):
     def transform(cls, ti) -> DataFrame:
         df = ti.xcom_pull(task_ids = "extract_task")
 
-        # brand_mapping = {brand: idx for idx, brand in enumerate(df["brand"].unique())}
-        # df["brand_encoded"] = df["brand"].map(brand_mapping)
-
+        df.rename(columns={"productName": "name"}, inplace=True)
         df[["measure", "weight"]] = df.apply(normalize_measurement, axis=1)
         df["weight"] = df["weight"].astype(int)
-
-        df["productTitle"] = df.apply(normalize_product_name, axis=1)
-        # df["tokens"] = df["normalized_product_name"].apply(tokenize)
+        df["title"] = df.apply(normalize_product_name, axis=1)
 
         df.drop(["productId", "brandId", "brandImageUrl",
                 "productReference", "productReferenceCode", "categoryId", 
@@ -118,6 +117,6 @@ class BistekETL(ETL):
                 "categories", "categoriesIds", "link",
                 "Peso Produto", "Unidade de Medida", "Especificações", 
                 "allSpecifications", "allSpecificationsGroups", "description", 
-                "items", "linkText"], axis=1, inplace=True)
+                "items", "linkText", "productTitle"], axis=1, inplace=True)
         
         return df

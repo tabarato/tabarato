@@ -1,0 +1,380 @@
+[
+    {
+        "name":"Refrigerante Guaraná Antarctica Zero 2L",
+        "brand":"Antarctica",
+        "measure":"ml",
+        "weight":2000,
+        "title":"Refrigerante Guaraná Antarctica Zero",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Refrigerante Guaraná Antarctica Zero 350ml Lata",
+        "brand":"Antarctica",
+        "measure":"ml",
+        "weight":350,
+        "title":"Refrigerante Guaraná Antarctica Zero Lata",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Refrigerante Guaraná Antarctica 2L",
+        "brand":"Antarctica",
+        "measure":"ml",
+        "weight":2000,
+        "title":"Refrigerante Guaraná Antarctica",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Cerveja Budweiser 350ml Lata",
+        "brand":"Budweiser",
+        "measure":"ml",
+        "weight":350,
+        "title":"Cerveja Budweiser Lata",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Refrigerante Guaraná Antarctica 350ml Lata",
+        "brand":"Antarctica",
+        "measure":"ml",
+        "weight":350,
+        "title":"Refrigerante Guaraná Antarctica Lata",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Creme Dental Sorriso Tripla Limpeza Completa 120g",
+        "brand":"Sorriso",
+        "measure":"g",
+        "weight":120,
+        "title":"Creme Dental Sorriso Tripla Limpeza Completa",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Cerveja Spaten Puro Malte 350ml Lata",
+        "brand":"Spaten",
+        "measure":"ml",
+        "weight":350,
+        "title":"Cerveja Spaten Puro Malte Lata",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Desodorante Antitranspirante Aerossol Rexona Men Active Dry 72h 250ml Leve Mais Pague Menos",
+        "brand":"Rexona",
+        "measure":"ml",
+        "weight":250,
+        "title":"Desodorante Antitranspirante Aerossol Rexona Men Active Dry 72h Leve Mais Pague Menos",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Cerveja Brahma Lata 350ml",
+        "brand":"Brahma",
+        "measure":"ml",
+        "weight":350,
+        "title":"Cerveja Brahma Lata",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Escova Dental Colgate Zig Zag Carvão Com 4 Unidades",
+        "brand":"Colgate",
+        "measure":"UN",
+        "weight":4,
+        "title":"Escova Dental Colgate Zig Zag Carvão Com 4 Unidades",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Desodorante Aero Dove Original Leve Mais Pague Menos 250ml",
+        "brand":"Dove",
+        "measure":"ml",
+        "weight":250,
+        "title":"Desodorante Aero Dove Original Leve Mais Pague Menos",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Refrigerante 500ml H2oh! Limão",
+        "brand":"H2oh",
+        "measure":"ml",
+        "weight":500,
+        "title":"Refrigerante H2oh! Limão",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Macarrao Arroz Barilla 500g Espag.S\/Glut",
+        "brand":"Barilla",
+        "measure":"g",
+        "weight":500,
+        "title":"Macarrao Arroz Barilla Espag.S\/Glut",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Cerveja Skol 269ml Beats Senses Lata",
+        "brand":"Skol",
+        "measure":"ml",
+        "weight":269,
+        "title":"Cerveja Skol Beats Senses Lata",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Sabonete Líquido Palmolive Naturals Óleo Nutritivo 200Ml Refil",
+        "brand":"Bistek",
+        "measure":"Ml",
+        "weight":200,
+        "title":"Sabonete Líquido Palmolive Naturals Óleo Nutritivo Refil",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Refrigerante H2oh 500ml Limoneto",
+        "brand":"H2oh",
+        "measure":"ml",
+        "weight":500,
+        "title":"Refrigerante H2oh Limoneto",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Bebida Mista Beats 269ml Caipirinha Lt",
+        "brand":"Skol",
+        "measure":"ml",
+        "weight":269,
+        "title":"Bebida Mista Beats Caipirinha Lt",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Desodorante Aero Rexona 250ml An+In L+P-",
+        "brand":"Rexona",
+        "measure":"ml",
+        "weight":250,
+        "title":"Desodorante Aero Rexona An+In L+P-",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Bebida Mista Beats 269ml Gt Lt",
+        "brand":"Skol",
+        "measure":"ml",
+        "weight":269,
+        "title":"Bebida Mista Beats Gt Lt",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Desodorante Aero Rexona 250ml Pow.D.L+P-",
+        "brand":"Rexona",
+        "measure":"ml",
+        "weight":250,
+        "title":"Desodorante Aero Rexona Pow.D.L+P-",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Creme Dental Sorriso 120g Dentes Brancos",
+        "brand":"Sorriso",
+        "measure":"g",
+        "weight":120,
+        "title":"Creme Dental Sorriso Dentes Brancos",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Desodorante Aero Rexona 250ml Antib+Inv",
+        "brand":"Rexona",
+        "measure":"ml",
+        "weight":250,
+        "title":"Desodorante Aero Rexona Antib+Inv",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Shampoo Palmolive 350ml 2x1 A.Caspa\/Qued",
+        "brand":"Palmolive",
+        "measure":"ml",
+        "weight":350,
+        "title":"Shampoo Palmolive 2x1 A.Caspa\/Qued",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Desodorante Aero Rexona 250ml M.V8 L+P-",
+        "brand":"Rexona",
+        "measure":"ml",
+        "weight":250,
+        "title":"Desodorante Aero Rexona M.V8 L+P-",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Desodorante Aero Rexona 250ml Inv.L+P-",
+        "brand":"Rexona",
+        "measure":"ml",
+        "weight":250,
+        "title":"Desodorante Aero Rexona Inv.L+P-",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Bebida Mista Beats 269ml Senses Ln",
+        "brand":"Skol",
+        "measure":"ml",
+        "weight":269,
+        "title":"Bebida Mista Beats Senses Ln",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Bebida Mista Beats 269ml Caipirinha Ln",
+        "brand":"Skol",
+        "measure":"ml",
+        "weight":269,
+        "title":"Bebida Mista Beats Caipirinha Ln",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Desodorante Aero Dove 250ml Inv.Dry L+P-",
+        "brand":"Dove",
+        "measure":"ml",
+        "weight":250,
+        "title":"Desodorante Aero Dove Inv.Dry L+P-",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Sabonete Liq.Protex 250ml Erva Doce",
+        "brand":"Protex",
+        "measure":"ml",
+        "weight":250,
+        "title":"Sabonete Liq.Protex Erva Doce",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Desodorante Aero Rexona 250ml Cot.D.L+P-",
+        "brand":"Rexona",
+        "measure":"ml",
+        "weight":250,
+        "title":"Desodorante Aero Rexona Cot.D.L+P-",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Escova Dental Colgate Tandy Ex.Macia C\/2",
+        "brand":"Colgate",
+        "measure":"UN",
+        "weight":2,
+        "title":"Escova Dental Colgate Tandy Ex.Macia C\/2",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Desodorante Aero Dove 250ml Men C.T.L+P-",
+        "brand":"Dove",
+        "measure":"ml",
+        "weight":250,
+        "title":"Desodorante Aero Dove Men C.T.L+P-",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Bebida Mista Beats 269ml Red Mix Ln",
+        "brand":"Skol",
+        "measure":"ml",
+        "weight":269,
+        "title":"Bebida Mista Beats Red Mix Ln",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Bebida Mista Beats 269ml Tropical Ln",
+        "brand":"Beats",
+        "measure":"ml",
+        "weight":269,
+        "title":"Bebida Mista Beats Tropical Ln",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Gel Dental Colgate 90g Natur. Ext.Car.Me",
+        "brand":"Colgate",
+        "measure":"g",
+        "weight":90,
+        "title":"Gel Dental Colgate Natur. Ext.Car.Me",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Desodorante Aero Rexona 250ml M.Inv.L+P-",
+        "brand":"Rexona",
+        "measure":"ml",
+        "weight":250,
+        "title":"Desodorante Aero Rexona M.Inv.L+P-",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Escova Dental Colgate Colors C\/5",
+        "brand":"Colgate",
+        "measure":"UN",
+        "weight":5,
+        "title":"Escova Dental Colgate Colors C\/5",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Creme Dental Colgate 70g Lum.White Cafe",
+        "brand":"Colgate",
+        "measure":"g",
+        "weight":70,
+        "title":"Creme Dental Colgate Lum.White Cafe",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Creme Dental Colgate 140g Lu.White Carv",
+        "brand":"Colgate",
+        "measure":"g",
+        "weight":140,
+        "title":"Creme Dental Colgate Lu.White Carv",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Enxaguante Bucal Colgate 1l Fresh Mint",
+        "brand":"Colgate",
+        "measure":"ml",
+        "weight":1000,
+        "title":"Enxaguante Bucal Colgate Fresh Mint",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Bebida Mista Beats 269ml Gt Ln",
+        "brand":"Skol",
+        "measure":"ml",
+        "weight":269,
+        "title":"Bebida Mista Beats Gt Ln",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    },
+    {
+        "name":"Creme Dental Colgate 70g Lum.White Vinho",
+        "brand":"Colgate",
+        "measure":"g",
+        "weight":70,
+        "title":"Creme Dental Colgate Lum.White Vinho",
+        "storeSlug":"bistek",
+        "insertedAt":1741464305819
+    }
+]

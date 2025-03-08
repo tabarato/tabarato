@@ -3,8 +3,7 @@ import re
 import pandas
 
 def normalize_product_name(row):
-    product_name = row["productName"]
-    brand = row["brand"]
+    product_name = row["name"]
     weight = int(row["weight"])
     measure = row["measure"]
 
@@ -17,8 +16,6 @@ def normalize_product_name(row):
             measure = "L"
 
         measurement_text = str(int(weight / 1000)) + measure
-
-    product_name = re.sub(re.escape(brand), "", product_name, flags=re.IGNORECASE)
 
     product_name = re.sub(re.escape(measurement_text), "", product_name, flags=re.IGNORECASE)
 
@@ -44,7 +41,7 @@ def normalize_measurement(row):
         measure = None
 
     if not weight or math.isnan(weight):
-        product_name = row["productName"]
+        product_name = row["name"]
         match = re.search(r"(\d+)\s*(ml|g|kg|l|lt)", product_name, re.IGNORECASE)
 
         if match:
