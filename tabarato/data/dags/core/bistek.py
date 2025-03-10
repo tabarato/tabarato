@@ -1,109 +1,90 @@
-from core.etl import StoreETL
-from core.utils.dataframe_utils import normalize_measurement, normalize_product_name
-import hrequests
+from data.dags.core.etl import StoreETL
+from data.dags.core.utils.dataframe_utils import normalize_measurement, normalize_product_name
 import os
 import re
 import itertools
-import time
 import json
-import random
 import pandas as pd
+import codecs
+import aiohttp
+import asyncio
 from dotenv import load_dotenv
-from pandas import DataFrame
+from bs4 import BeautifulSoup
 
 load_dotenv()
 
 class BistekETL(StoreETL):
     products_url = []
-    main_page_url = os.getenv("BISTEK_MAIN_PAGE_URL")
-    CATALOG_URL = "https://www.bistek.com.br/exclusivo-site?order=OrderByTopSaleDESC"
-    PRODUCT_API_URL = "https://www.bistek.com.br/api/catalog_system/pub/products/search/?fq=productId:{}"
-    PAGE_CATALOG_URL = "https://www.bistek.com.br/exclusivo-site?order=OrderByTopSaleDESC&page={0}"
+    main_page_url = os.getenv("BISTEK_BASE_URL")
+    product_details_url = os.getenv("BISTEK_PRODUCT_DETAILS_URL")
 
     @classmethod
-    def _process_category(cls):
+    async def _process_category(cls, session: aiohttp.ClientSession):
         """Processes the URLs of the categories on the home page"""
-        pass
+        async with session.get(cls.main_page_url) as response:
+            soup = BeautifulSoup(await response.text(), 'html.parser')
+            categories_data = soup.find_all("template")[4]
+            script = categories_data.find('script')
+            
+            href_pattern = re.compile(r'"href":\s*"([^"]+?)"')
+            hrefs = href_pattern.findall(script.text)
+            hrefs = [codecs.decode(href, 'unicode_escape') for href in hrefs]
+            
+            hrefs = [(cls.main_page_url + href)for href in hrefs if len(href.split("/")) == 3]
+
+            return hrefs
     
     @classmethod
-    def _process_category_pagination(cls):
-        """Processes the pagination URLs of the category being explored"""
-        pass
+    async def _process_category_pagination(cls, session: aiohttp.ClientSession, url: str):
+        async with session.get(url) as response:
+            soup = BeautifulSoup(await response.text(), 'html.parser')
+            pages = soup.find_all("li", class_="bistek-custom-apps-0-x-paginationItem bistek-custom-apps-0-x-paginationItem--page")
+            if not pages:
+                return [url]
+            
+            max_page = pages[-1].find("span").find("a").get_text()
+            return [url + f"?page={page}" for page in range(1, int(max_page) + 1)]
 
     @classmethod
-    def _collect_product_id(cls):
+    async def _collect_product_id(cls, session: aiohttp.ClientSession, url: str):
         """Collects the IDs of the products on the category page being explored."""
-        pass
+        async with session.get(url) as response:
+            try:
+                await asyncio.sleep(0.5)
+                soup = BeautifulSoup(await response.text(), 'html.parser')
+                script = soup.find_all('script', type='application/ld+json')[-1]
+                script = json.loads(script.text)
+
+                urls = []
+                for product in script['itemListElement']:
+                    if not product.get("item", None):
+                        continue
+                    
+                    urls.append(cls.product_details_url.replace("{id}", product['item']['sku']))
+
+                return urls
+            except Exception as e:
+                print(str(e))
+                print("Erro ao coletar id: ", url, " Status: ", response.status)
     
     @classmethod
-    def _collect_product_data(cls):
+    async def _collect_product_data(cls, session: aiohttp.ClientSession, url: str):
         """Collect data from the product in JSON format."""
-        pass
-
-    @classmethod
-    def get_catalog_pages(cls, session: hrequests.Session):
-        response = session.get(cls.CATALOG_URL)    
-        pfo = response.html.find("ul", class_="bistek-custom-apps-0-x-pagination bistek-custom-apps-0-x-pagination--start")
-        # pages = pfo.find_all("li", class_="bistek-custom-apps-0-x-paginationItem bistek-custom-apps-0-x-paginationItem--page")
-        page_links = pfo.absolute_links
-
-        page_pattern = re.compile(r'page=(\d+)')
-        
-        # Extraindo os números das páginas e convertendo para inteiros
-        page_numbers = [int(match.group(1)) for page in page_links if (match := page_pattern.search(page))]
-        max_page = max(page_numbers) if page_numbers else None
-        return max_page
-
-    @classmethod
-    def get_objects_id(cls, session: hrequests.Session, url):
-        req_object = session.get(url)
-        json_element = req_object.html.find_all('script', type='application/ld+json')[-1]
-        json_obj = json.loads(json_element.text)
-        
-        url_ids = [cls.PRODUCT_API_URL.format(product['item']['sku']) for product in json_obj['itemListElement']]
-        return url_ids
-
-    @classmethod
-    def get_objects_json_data(cls, session: hrequests.Session, url):
-        req_object = session.get(url)
-        print("URL: ", url, " Status: ", req_object.status_code)
-        return req_object.json()[0]
+        async with session.get(url) as response:
+            try:
+                await asyncio.sleep(0.5)
+                product = await response.json()
+                return product[0]
+            except Exception as e:
+                print(str(e))
+                print("Erro ao coletar produto: ", url, " Status: ", response.status)
 
     @classmethod
     def slug(cls) -> str:
         return "bistek"
 
     @classmethod
-    def extract(cls) -> DataFrame:
-        """Collect data from Bistek Online Market"""
-        # try:
-        #     with hrequests.Session() as session:
-        #         req_object = session.get(cls.main_page_url)
-        #         print("URL: ", cls.main_page_url, " Status: ", req_object.status_code)
-        #         return req_object.json()[0]
-        # except Exception as e:
-        #     raise e
-
-        with hrequests.Session() as session:
-            pages = cls.get_catalog_pages(session)
-            urls = [cls.PAGE_CATALOG_URL.format(page) for page in range(1, pages+1)]
-            url_ids = [cls.get_objects_id(session, url) for url in urls]
-            url_ids = list(itertools.chain.from_iterable(url_ids))
-            
-            collected_data = []
-            for url in url_ids:
-                json_data = cls.get_objects_json_data(session, url)
-                collected_data.append(json_data)
-                time.sleep(random.randint(1, 5))
-            
-            df = pd.DataFrame(collected_data)
-
-            df.drop(["clusterHighlights", "searchableClusters"], axis=1, inplace=True)
-
-            return df
-
-    @classmethod
-    def transform(cls, ti) -> DataFrame:
+    def transform(cls, ti) -> pd.DataFrame:
         df = ti.xcom_pull(task_ids = "extract_task")
 
         df.rename(columns={"productName": "name"}, inplace=True)
@@ -120,3 +101,31 @@ class BistekETL(StoreETL):
                 "items", "linkText", "productTitle"], axis=1, inplace=True)
         
         return df
+
+    @classmethod
+    async def extract(cls) -> pd.DataFrame:
+        """Collect data from Bistek Online Market"""
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                categories_url = await cls._process_category(session=session)
+
+                categories_url_pages_tasks = [cls._process_category_pagination(session=session, url=url) for url in categories_url]
+
+                categories_url_pages = await asyncio.gather(*categories_url_pages_tasks)
+                categories_url_pages = list(itertools.chain.from_iterable(categories_url_pages))
+                
+                products_url_tasks = [cls._collect_product_id(session=session, url=url) for url in categories_url_pages]
+                products_url = await asyncio.gather(*products_url_tasks)
+                products_url = list(set(itertools.chain.from_iterable(filter(None, products_url))))
+                
+                products_data_tasks = [cls._collect_product_data(session=session, url=url) for url in products_url]
+                products_data = list(await asyncio.gather(*products_data_tasks))
+
+                df = pd.DataFrame(products_data)
+
+                df.drop(["clusterHighlights", "searchableClusters"], axis=1, inplace=True)
+
+                return df
+        except Exception as e:
+            raise e
