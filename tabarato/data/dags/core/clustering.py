@@ -2,6 +2,7 @@ from core.utils.string_utils import tokenize, object_id, timestamp
 import json
 import numpy as np
 import os
+import pathlib
 import requests
 import pandas as pd
 from pandas import DataFrame
@@ -13,21 +14,17 @@ from scipy.cluster.hierarchy import fcluster, linkage
 
 
 class Clustering:
-    MONGODB_CONNECTION = os.getenv("MONGODB_CONNECTION")
-    MONGODB_DATABASE = os.getenv("MONGODB_DATABASE")
     ELASTICSEARCH_URL = os.getenv("ELASTICSEARCH_URL")
     
     @classmethod
     def process(cls, ti) -> DataFrame:
-        client = MongoClient(cls.MONGODB_CONNECTION)
-        db = client[cls.MONGODB_DATABASE]
-        products = db["products"]
+        data_dir = pathlib.Path("/opt/airflow/data/silver")
+        df = pd.concat(
+            pd.read_parquet(parquet_file) for parquet_file in data_dir.glob("*.parquet")
+        )
 
-        df = pd.DataFrame(list(products.find()))
         df.dropna(subset=["name"], inplace=True)
-        df["_id"] = df["_id"].apply(object_id)
-        df["tokens"] = df["title"].apply(tokenize)
-        df["insertedAt"] = df["insertedAt"].apply(timestamp)
+        df["tokens"] = df["title"].apply(lambda x: tokenize(x, words_to_ignore=["lata"]))
 
         brand_mapping = {brand: idx for idx, brand in enumerate(df["brand"].unique())}
         df["brand_encoded"] = df["brand"].map(brand_mapping)
@@ -43,27 +40,46 @@ class Clustering:
         distance_matrix = pdist(features, metric="euclidean")
         linkage_matrix = linkage(distance_matrix, method="ward")
 
-        distance_threshold = 5.0  
+        distance_threshold = 1.0  
         cluster_labels = fcluster(linkage_matrix, distance_threshold, criterion="distance")
 
         df["cluster"] = cluster_labels
 
-        clustered_data = df.groupby("cluster").apply(lambda x: x.to_dict(orient="records")).to_dict()
-        
-        return clustered_data
+        unique_columns = [
+            "title", "insertedAt", "cluster"
+        ]
+
+        df = (
+            df.groupby(["brand", "tokens"])
+                .agg({
+                    **{col: ("first") for col in unique_columns},
+                    "weight": lambda x: [{"weight": w, "measure": measure} for w, measure in zip(x, df.loc[x.index, "measure"])],
+                    "storeSlug": lambda x: [{"storeSlug": store} for store in x],
+                })
+                .rename(columns={"weight": "sizes", "storeSlug": "references"})
+                .reset_index()
+        )
+
+        return df
 
     @classmethod
     def load(cls, ti):
         df = ti.xcom_pull(task_ids = "process_task")
 
-        request = ""
-        for product in df:
-            request += '{"index": {}}\n'
-            request += json.dumps(product) + '\n'
+        path = f"/opt/airflow/data/clustered"
 
-        headers = {"Content-Type": "application/json"}
-        response = requests.post(cls.ELASTICSEARCH_URL + "/products/_bulk", data=request, headers=headers)
+        pathlib.Path(path).mkdir(parents=True, exist_ok=True)
+        
+        df.to_parquet(f"{path}/products.parquet")
 
-        if response.status_code != 200:
-            print(response.text)
-            raise Exception(response.text)
+        # request = ""
+        # for product in df:
+        #     request += '{"index": {}}\n'
+        #     request += json.dumps(product) + '\n'
+
+        # headers = {"Content-Type": "application/json"}
+        # response = requests.post(cls.ELASTICSEARCH_URL + "/products/_bulk", data=request, headers=headers)
+
+        # if response.status_code != 200:
+        #     print(response.text)
+        #     raise Exception(response.text)

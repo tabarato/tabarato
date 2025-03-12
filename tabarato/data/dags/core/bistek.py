@@ -1,5 +1,5 @@
-from data.dags.core.etl import StoreETL
-from data.dags.core.utils.dataframe_utils import normalize_measurement, normalize_product_name
+from core.etl import StoreETL
+from core.utils.dataframe_utils import normalize_measurement, normalize_product_name
 import os
 import re
 import itertools
@@ -18,6 +18,74 @@ class BistekETL(StoreETL):
     main_page_url = os.getenv("BISTEK_BASE_URL")
     product_details_url = os.getenv("BISTEK_PRODUCT_DETAILS_URL")
 
+    @classmethod
+    def slug(cls) -> str:
+        return "bistek"
+
+    @classmethod
+    def extract(cls) -> pd.DataFrame:
+        """Collect data from Bistek Online Market"""
+
+        async def scrap():
+            try:
+                async with aiohttp.ClientSession() as session:
+                    categories_url = await cls._process_category(session=session)
+
+                    categories_url_pages_tasks = [cls._process_category_pagination(session=session, url=url) for url in categories_url]
+
+                    categories_url_pages = await asyncio.gather(*categories_url_pages_tasks)
+                    categories_url_pages = list(itertools.chain.from_iterable(categories_url_pages))
+                    
+                    products_url_tasks = [cls._collect_product_id(session=session, url=url) for url in categories_url_pages]
+                    products_url = await asyncio.gather(*products_url_tasks)
+                    products_url = list(set(itertools.chain.from_iterable(filter(None, products_url))))
+                    
+                    products_data_tasks = [cls._collect_product_data(session=session, url=url) for url in products_url]
+                    products_data = list(await asyncio.gather(*products_data_tasks))
+
+                    df = pd.DataFrame(products_data)
+
+                    df.drop(["clusterHighlights", "searchableClusters"], axis=1, inplace=True)
+
+                    return df
+            except Exception as e:
+                raise e
+
+        return asyncio.run(scrap(cls))
+        
+        
+    @classmethod
+    def transform(cls, ti) -> pd.DataFrame:
+        df = ti.xcom_pull(task_ids = "extract_task")
+
+        df.rename(columns={"productName": "name", "productId": "refId"}, inplace=True)
+        df[["measure", "weight"]] = df.apply(normalize_measurement, axis=1)
+        df["weight"] = df["weight"].astype(int)
+        df["title"] = df.apply(normalize_product_name, axis=1)
+
+        items = df["items"][0]
+        if items.any():
+            item = items[0]
+            seller = item["sellers"][0]
+
+            df["cartLink"] = seller["addToCartLink"]
+            
+            commertial_offer = seller["commertialOffer"];
+
+            df["price"] = commertial_offer["Price"]
+            df["oldPrice"] = commertial_offer["ListPrice"]
+
+        df.drop(["brandId", "brandImageUrl",
+                "productReference", "productReferenceCode", "categoryId", 
+                "metaTagDescription", "releaseDate", "productClusters",
+                "categories", "categoriesIds",
+                "Peso Produto", "Unidade de Medida", "Especificações", 
+                "allSpecifications", "allSpecificationsGroups", "description", 
+                "items", "linkText", "productTitle",
+                "Descrição do produto Genius-SEO", "Genius-SEO"], axis=1, inplace=True)
+        
+        return df
+        
     @classmethod
     async def _process_category(cls, session: aiohttp.ClientSession):
         """Processes the URLs of the categories on the home page"""
@@ -78,54 +146,3 @@ class BistekETL(StoreETL):
             except Exception as e:
                 print(str(e))
                 print("Erro ao coletar produto: ", url, " Status: ", response.status)
-
-    @classmethod
-    def slug(cls) -> str:
-        return "bistek"
-
-    @classmethod
-    def transform(cls, ti) -> pd.DataFrame:
-        df = ti.xcom_pull(task_ids = "extract_task")
-
-        df.rename(columns={"productName": "name"}, inplace=True)
-        df[["measure", "weight"]] = df.apply(normalize_measurement, axis=1)
-        df["weight"] = df["weight"].astype(int)
-        df["title"] = df.apply(normalize_product_name, axis=1)
-
-        df.drop(["productId", "brandId", "brandImageUrl",
-                "productReference", "productReferenceCode", "categoryId", 
-                "metaTagDescription", "releaseDate", "productClusters",
-                "categories", "categoriesIds", "link",
-                "Peso Produto", "Unidade de Medida", "Especificações", 
-                "allSpecifications", "allSpecificationsGroups", "description", 
-                "items", "linkText", "productTitle"], axis=1, inplace=True)
-        
-        return df
-
-    @classmethod
-    async def extract(cls) -> pd.DataFrame:
-        """Collect data from Bistek Online Market"""
-        
-        try:
-            async with aiohttp.ClientSession() as session:
-                categories_url = await cls._process_category(session=session)
-
-                categories_url_pages_tasks = [cls._process_category_pagination(session=session, url=url) for url in categories_url]
-
-                categories_url_pages = await asyncio.gather(*categories_url_pages_tasks)
-                categories_url_pages = list(itertools.chain.from_iterable(categories_url_pages))
-                
-                products_url_tasks = [cls._collect_product_id(session=session, url=url) for url in categories_url_pages]
-                products_url = await asyncio.gather(*products_url_tasks)
-                products_url = list(set(itertools.chain.from_iterable(filter(None, products_url))))
-                
-                products_data_tasks = [cls._collect_product_data(session=session, url=url) for url in products_url]
-                products_data = list(await asyncio.gather(*products_data_tasks))
-
-                df = pd.DataFrame(products_data)
-
-                df.drop(["clusterHighlights", "searchableClusters"], axis=1, inplace=True)
-
-                return df
-        except Exception as e:
-            raise e

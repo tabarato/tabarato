@@ -45,8 +45,8 @@ def normalize_measurement(row):
         match = re.search(r"(\d+)\s*(ml|g|kg|l|lt)", product_name, re.IGNORECASE)
 
         if match:
-            weight = match.group(1)
-            measure = match.group(2)
+            weight = float(match.group(1))
+            measure = str(match.group(2))
         else:
             weight = 0
             measure = ""
@@ -54,8 +54,8 @@ def normalize_measurement(row):
     if measure.upper() == "KG":
         weight *= 1000
         measure = "g"
-    elif measure.upper() == "LT":
+    elif measure.upper() == "LT" or measure.upper() == "L":
         weight *= 1000
         measure = "ml"
     
-    return pandas.Series([measure, weight])
+    return pandas.Series([measure, int(weight)])
