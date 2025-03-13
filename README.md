@@ -3,10 +3,13 @@
 Create a `.env` file at the root directory with the following values:
 
 ```
-AIRFLOW_UID=1000
-AIRFLOW_PROJ_DIR=./tabarato/data
+AIRFLOW_UID="1000"
+AIRFLOW_PROJ_DIR="./tabarato/data"
+AIRFLOW_OUTPUT_DIR="./data"
 BISTEK_BASE_URL="https://www.bistek.com.br"
 BISTEK_PRODUCT_DETAILS_URL="https://www.bistek.com.br/api/catalog_system/pub/products/search/?fq=productId:{id}"
+ANGELONI_BASE_URL="https://www.angeloni.com.br/super"
+ANGELONI_PRODUCT_DETAILS_URL="https://www.angeloni.com.br/super/api/catalog_system/pub/products/search/?fq=productId:{id}"
 MONGODB_CONNECTION="mongodb://airflow:airflow@mongodb:27017/"
 MONGODB_DATABASE="tabarato"
 ELASTICSEARCH_URL="http://localhost:9200"
