@@ -38,13 +38,13 @@ class StoreETL(ABC):
         df["storeSlug"] = cls.slug()
         df["insertedAt"] = dt.datetime.now(dt.timezone.utc)
         
-        client = MongoClient(cls.MONGODB_CONNECTION)
-        db = client[cls.MONGODB_DATABASE]
-        products = db["products"]
+        # client = MongoClient(cls.MONGODB_CONNECTION)
+        # db = client[cls.MONGODB_DATABASE]
+        # products = db["products"]
 
-        products.insert_many(df.to_dict(orient="records"))
+        # products.insert_many(df.to_dict(orient="records"))
 
-        client.close()
+        # client.close()
 
         path = "/opt/airflow/data/silver"
 

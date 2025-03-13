@@ -45,28 +45,29 @@ class Clustering:
 
         df["cluster"] = cluster_labels
 
-        unique_columns = [
-            "title", "insertedAt", "cluster"
-        ]
+        df_grouped = df.groupby(["brand", "tokens"]).agg({
+            "name": "first",
+            "title": "first",
+            "cluster": "first",
+            "storeSlug": list,
+            "weight": list,
+            "measure": list
+        }).reset_index()
 
-        df = (
-            df.groupby(["brand", "tokens"])
-                .agg({
-                    **{col: ("first") for col in unique_columns},
-                    "weight": lambda x: [{"weight": w, "measure": measure} for w, measure in zip(x, df.loc[x.index, "measure"])],
-                    "storeSlug": lambda x: [{"storeSlug": store} for store in x],
-                })
-                .rename(columns={"weight": "sizes", "storeSlug": "references"})
-                .reset_index()
+        df_grouped["variations"] = df_grouped.apply(
+            cls._group_variations,
+            axis=1
         )
 
-        return df
+        df_grouped.drop(columns=["weight", "measure", "storeSlug"], inplace=True)
+
+        return df_grouped
 
     @classmethod
     def load(cls, ti):
         df = ti.xcom_pull(task_ids = "process_task")
 
-        path = f"/opt/airflow/data/clustered"
+        path = "/opt/airflow/data/clustered"
 
         pathlib.Path(path).mkdir(parents=True, exist_ok=True)
         
@@ -83,3 +84,17 @@ class Clustering:
         # if response.status_code != 200:
         #     print(response.text)
         #     raise Exception(response.text)
+    
+    @classmethod
+    def _group_variations(cls, row):
+        variations = [{"weight": w, "measure": m, "storeSlug": s} for w, m, s in zip(row["weight"], row["measure"], row["storeSlug"])]
+
+        df = pd.DataFrame(variations)
+
+        df = df.groupby(["weight", "measure"], as_index=False).agg({
+            "storeSlug": list
+        })
+
+        df.rename(columns={"storeSlug": "stores"}, inplace=True)
+
+        return df.to_dict(orient="records")

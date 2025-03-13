@@ -14,7 +14,6 @@ from bs4 import BeautifulSoup
 load_dotenv()
 
 class BistekETL(StoreETL):
-    products_url = []
     main_page_url = os.getenv("BISTEK_BASE_URL")
     product_details_url = os.getenv("BISTEK_PRODUCT_DETAILS_URL")
 
@@ -51,7 +50,7 @@ class BistekETL(StoreETL):
             except Exception as e:
                 raise e
 
-        return asyncio.run(scrap(cls))
+        return asyncio.run(scrap())
         
         
     @classmethod
@@ -59,9 +58,10 @@ class BistekETL(StoreETL):
         df = ti.xcom_pull(task_ids = "extract_task")
 
         df.rename(columns={"productName": "name", "productId": "refId"}, inplace=True)
-        df[["measure", "weight"]] = df.apply(normalize_measurement, axis=1)
-        df["weight"] = df["weight"].astype(int)
+        df["name"] = df["name"].str.title()
+        df[["measure", "weight"]] = df.apply(lambda row: normalize_measurement(row, "Peso Produto", "Unidade de Medida"), axis=1)
         df["title"] = df.apply(normalize_product_name, axis=1)
+        df["brand"] = df["brand"].str.lower()
 
         items = df["items"][0]
         if items.any():
