@@ -38,19 +38,16 @@ class StoreETL(ABC):
         df["storeSlug"] = cls.slug()
         df["insertedAt"] = dt.datetime.now(dt.timezone.utc)
         
-        client = MongoClient(cls.MONGODB_CONNECTION)
-        print(client.list_database_names())
-        db = client[cls.MONGODB_DATABASE]
-        products = db["products"]
+        # client = MongoClient(cls.MONGODB_CONNECTION)
+        # db = client[cls.MONGODB_DATABASE]
+        # products = db["products"]
 
-        products.insert_many(df.to_dict(orient="records"))
+        # products.insert_many(df.to_dict(orient="records"))
 
-        client.close()
+        # client.close()
 
-        path = f"/opt/airflow/dags/output/{cls.slug()}"
+        path = "/opt/airflow/data/silver"
 
         pathlib.Path(path).mkdir(parents=True, exist_ok=True)
         
-        with open(f"{path}/data.json", "w", encoding="utf-8") as file:
-            df.to_json(file, orient="records", indent=4, force_ascii=False)
-            
+        df.to_parquet(f"{path}/{cls.slug()}_data.parquet")

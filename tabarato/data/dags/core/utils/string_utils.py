@@ -1,10 +1,11 @@
 from datetime import datetime
 import re
 
-def tokenize(text):
+def tokenize(text, words_to_ignore):
     text = text.lower()
-    words = re.findall(r"\b[a-zA-ZÀ-ÿ0-9]+\b", text)
-    return words
+    words = sorted(re.findall(r"\b[a-zA-ZÀ-ÿ0-9]+\b", text))
+
+    return "-".join([word for word in words if word not in words_to_ignore])
 
 def object_id(id):
     return str(id)

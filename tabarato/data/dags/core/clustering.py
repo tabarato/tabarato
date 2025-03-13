@@ -2,6 +2,7 @@ from core.utils.string_utils import tokenize, object_id, timestamp
 import json
 import numpy as np
 import os
+import pathlib
 import requests
 import pandas as pd
 from pandas import DataFrame
@@ -13,21 +14,17 @@ from scipy.cluster.hierarchy import fcluster, linkage
 
 
 class Clustering:
-    MONGODB_CONNECTION = os.getenv("MONGODB_CONNECTION")
-    MONGODB_DATABASE = os.getenv("MONGODB_DATABASE")
     ELASTICSEARCH_URL = os.getenv("ELASTICSEARCH_URL")
     
     @classmethod
     def process(cls, ti) -> DataFrame:
-        client = MongoClient(cls.MONGODB_CONNECTION)
-        db = client[cls.MONGODB_DATABASE]
-        products = db["products"]
+        data_dir = pathlib.Path("/opt/airflow/data/silver")
+        df = pd.concat(
+            pd.read_parquet(parquet_file) for parquet_file in data_dir.glob("*.parquet")
+        )
 
-        df = pd.DataFrame(list(products.find()))
         df.dropna(subset=["name"], inplace=True)
-        df["_id"] = df["_id"].apply(object_id)
-        df["tokens"] = df["title"].apply(tokenize)
-        df["insertedAt"] = df["insertedAt"].apply(timestamp)
+        df["tokens"] = df["title"].apply(lambda x: tokenize(x, words_to_ignore=["lata"]))
 
         brand_mapping = {brand: idx for idx, brand in enumerate(df["brand"].unique())}
         df["brand_encoded"] = df["brand"].map(brand_mapping)
@@ -43,27 +40,78 @@ class Clustering:
         distance_matrix = pdist(features, metric="euclidean")
         linkage_matrix = linkage(distance_matrix, method="ward")
 
-        distance_threshold = 5.0  
+        distance_threshold = 1.0  
         cluster_labels = fcluster(linkage_matrix, distance_threshold, criterion="distance")
 
         df["cluster"] = cluster_labels
 
-        clustered_data = df.groupby("cluster").apply(lambda x: x.to_dict(orient="records")).to_dict()
-        
-        return clustered_data
+        df_grouped = df.groupby(["brand", "tokens"]).agg({
+            "name": "first",
+            "title": "first",
+            "cluster": "first",
+            "storeSlug": list,
+            "weight": list,
+            "measure": list,
+            "price": list,
+            "oldPrice": list,
+            "link": list,
+            "cartLink": list
+        }).reset_index()
+
+        df_grouped["variations"] = df_grouped.apply(
+            cls._group_variations,
+            axis=1
+        )
+
+        df_grouped.drop(columns=["weight", "measure", "storeSlug", "price", "oldPrice", "link", "cartLink"], inplace=True)
+
+        return df_grouped
 
     @classmethod
     def load(cls, ti):
         df = ti.xcom_pull(task_ids = "process_task")
 
-        request = ""
-        for product in df:
-            request += '{"index": {}}\n'
-            request += json.dumps(product) + '\n'
+        path = "/opt/airflow/data/clustered"
 
-        headers = {"Content-Type": "application/json"}
-        response = requests.post(cls.ELASTICSEARCH_URL + "/products/_bulk", data=request, headers=headers)
+        pathlib.Path(path).mkdir(parents=True, exist_ok=True)
+        
+        df.to_parquet(f"{path}/products.parquet")
 
-        if response.status_code != 200:
-            print(response.text)
-            raise Exception(response.text)
+        # request = ""
+        # for product in df:
+        #     request += '{"index": {}}\n'
+        #     request += json.dumps(product) + '\n'
+
+        # headers = {"Content-Type": "application/json"}
+        # response = requests.post(cls.ELASTICSEARCH_URL + "/products/_bulk", data=request, headers=headers)
+
+        # if response.status_code != 200:
+        #     print(response.text)
+        #     raise Exception(response.text)
+    
+    @classmethod
+    def _group_variations(cls, row):
+        variations = [
+            {
+                "weight": w, "measure": m, 
+                "storeSlug": s, "price": p, "oldPrice": op, "link": l, "cartLink": cl
+            } 
+            for w, m, s, p, op, l, cl in zip(
+                row["weight"], row["measure"], row["storeSlug"], 
+                row["price"], row["oldPrice"], row["link"], row["cartLink"]
+            )
+        ]
+
+        df = pd.DataFrame(variations)
+
+        df_grouped = df.groupby(["weight", "measure"], as_index=False).agg(
+            sellers=("storeSlug", lambda x: [
+                {"storeSlug": store, "price": price, "oldPrice": old_price, "link": link, "cartLink": cart_link} 
+                for store, price, old_price, link, cart_link in zip(
+                    x, df.loc[x.index, "price"], df.loc[x.index, "oldPrice"], 
+                    df.loc[x.index, "link"], df.loc[x.index, "cartLink"]
+                )
+            ])
+        )
+
+        return df_grouped.to_dict(orient="records")

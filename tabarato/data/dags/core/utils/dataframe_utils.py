@@ -1,61 +1,66 @@
 import math
 import re
+from unidecode import unidecode
 import pandas
 
 def normalize_product_name(row):
     product_name = row["name"]
-    weight = int(row["weight"])
-    measure = row["measure"]
+    weight = row["weight"]
+    weight_divided = weight / 1000
+    weight_divided_str = str(weight_divided)
 
-    if weight < 1000:
-        measurement_text = str(weight) + measure
-    else:
-        if measure == "g":
-            measure = "KG"
-        else:
-            measure = "L"
+    measurement_pattern = r'\b\d+(?:[.,]\d+)?\s*(?:lt|g|kg|ml|l|litro|litros|grama|gramas|quilo|quilos|quilograma|quilogramas)\b\.?\b' #|lata|un|pct|cx|fd|pacote|garrafa|frasco|saco|tablete|barra|cartela|fardo|balde|galão|tubo|ampola
 
-        measurement_text = str(int(weight / 1000)) + measure
-
-    product_name = re.sub(re.escape(measurement_text), "", product_name, flags=re.IGNORECASE)
+    product_name = re.sub(measurement_pattern, "", product_name, flags=re.IGNORECASE)
 
     product_name = re.sub(r"\s+", " ", product_name).strip()
 
+    product_name = ' '.join(dict.fromkeys(product_name.split()))
+
+    product_name = unidecode(product_name)
+
     return product_name
 
-def normalize_measurement(row):
-    raw_weight = row["Peso Produto"]
-    raw_measure = row["Unidade de Medida"]
+def normalize_measurement(row, weight_col, measure_col):
+    raw_weight = row[weight_col]
+    raw_measure = row[measure_col]
 
-    def get_list(value):
+    def get_from_list_or_default(value):
         try:
-            return list(value)
+            return list(value)[0]
         except:
-            return None
+            return value
     
     try:
-        weight = float(get_list(raw_weight)[0]) if raw_weight and get_list(raw_weight) else float(raw_weight)
-        measure = str(get_list(raw_measure)[0]) if raw_measure and get_list(raw_measure) else str(raw_measure)
-    except TypeError:
+        weight = float(get_from_list_or_default(raw_weight).replace(",", ".")) if raw_weight else None
+        measure = str(get_from_list_or_default(raw_measure).lower() if raw_measure else None)
+    except Exception:
         weight = None
         measure = None
 
-    if not weight or math.isnan(weight):
-        product_name = row["name"]
-        match = re.search(r"(\d+)\s*(ml|g|kg|l|lt)", product_name, re.IGNORECASE)
+    valid_solid_measures = ["g", "kg", "grama", "quilo", "quilograma"]
+    valid_liquid_measures = ["ml", "l", "lt", "litro", "mililitro"]
 
-        if match:
-            weight = match.group(1)
-            measure = match.group(2)
+    if not weight or not measure or math.isnan(weight) or (measure not in valid_solid_measures and measure not in valid_liquid_measures):
+        product_name = row["name"]
+        solid_match = re.search(f"(\d+)\s*({'|'.join(valid_solid_measures)})", product_name, re.IGNORECASE)
+        liquid_match = re.search(f"(\d+)\s*({'|'.join(valid_liquid_measures)})", product_name, re.IGNORECASE)
+
+        if solid_match:
+            weight = float(solid_match.group(1))
+            measure = str(solid_match.group(2)).lower()
+        elif liquid_match:
+            weight = float(liquid_match.group(1))
+            measure = str(liquid_match.group(2)).lower()
         else:
             weight = 0
             measure = ""
 
-    if measure.upper() == "KG":
+    if measure == "kg" or measure == "quilo" or measure == "quilograma":
         weight *= 1000
         measure = "g"
-    elif measure.upper() == "LT":
+    elif measure == "l" or measure == "lt" or measure == "litro":
         weight *= 1000
         measure = "ml"
-    
-    return pandas.Series([measure, weight])
+
+    return pandas.Series([measure, int(weight)])
