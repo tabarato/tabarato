@@ -1,27 +1,23 @@
 import math
 import re
+from unidecode import unidecode
 import pandas
 
 def normalize_product_name(row):
     product_name = row["name"]
     weight = row["weight"]
-    measure = row["measure"]
+    weight_divided = weight / 1000
+    weight_divided_str = str(weight_divided)
 
-    if weight < 1000:
-        measurement_text = str(weight) + measure
-    else:
-        if measure == "g":
-            measure = "kg"
-        else:
-            measure = "L"
+    measurement_pattern = r'\b\d+(?:[.,]\d+)?\s*(?:lt|g|kg|ml|l|litro|litros|grama|gramas|quilo|quilos|quilograma|quilogramas)\b\.?\b' #|lata|un|pct|cx|fd|pacote|garrafa|frasco|saco|tablete|barra|cartela|fardo|balde|galão|tubo|ampola
 
-        measurement_text = str(int(weight / 1000)) + measure
-
-    product_name = re.sub(re.escape(measurement_text), "", product_name, flags=re.IGNORECASE)
+    product_name = re.sub(measurement_pattern, "", product_name, flags=re.IGNORECASE)
 
     product_name = re.sub(r"\s+", " ", product_name).strip()
 
     product_name = ' '.join(dict.fromkeys(product_name.split()))
+
+    product_name = unidecode(product_name)
 
     return product_name
 

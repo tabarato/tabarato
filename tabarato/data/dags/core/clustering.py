@@ -51,7 +51,11 @@ class Clustering:
             "cluster": "first",
             "storeSlug": list,
             "weight": list,
-            "measure": list
+            "measure": list,
+            "price": list,
+            "oldPrice": list,
+            "link": list,
+            "cartLink": list
         }).reset_index()
 
         df_grouped["variations"] = df_grouped.apply(
@@ -59,7 +63,7 @@ class Clustering:
             axis=1
         )
 
-        df_grouped.drop(columns=["weight", "measure", "storeSlug"], inplace=True)
+        df_grouped.drop(columns=["weight", "measure", "storeSlug", "price", "oldPrice", "link", "cartLink"], inplace=True)
 
         return df_grouped
 
@@ -87,14 +91,27 @@ class Clustering:
     
     @classmethod
     def _group_variations(cls, row):
-        variations = [{"weight": w, "measure": m, "storeSlug": s} for w, m, s in zip(row["weight"], row["measure"], row["storeSlug"])]
+        variations = [
+            {
+                "weight": w, "measure": m, 
+                "storeSlug": s, "price": p, "oldPrice": op, "link": l, "cartLink": cl
+            } 
+            for w, m, s, p, op, l, cl in zip(
+                row["weight"], row["measure"], row["storeSlug"], 
+                row["price"], row["oldPrice"], row["link"], row["cartLink"]
+            )
+        ]
 
         df = pd.DataFrame(variations)
 
-        df = df.groupby(["weight", "measure"], as_index=False).agg({
-            "storeSlug": list
-        })
+        df_grouped = df.groupby(["weight", "measure"], as_index=False).agg(
+            sellers=("storeSlug", lambda x: [
+                {"storeSlug": store, "price": price, "oldPrice": old_price, "link": link, "cartLink": cart_link} 
+                for store, price, old_price, link, cart_link in zip(
+                    x, df.loc[x.index, "price"], df.loc[x.index, "oldPrice"], 
+                    df.loc[x.index, "link"], df.loc[x.index, "cartLink"]
+                )
+            ])
+        )
 
-        df.rename(columns={"storeSlug": "stores"}, inplace=True)
-
-        return df.to_dict(orient="records")
+        return df_grouped.to_dict(orient="records")

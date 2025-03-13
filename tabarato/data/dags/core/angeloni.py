@@ -64,17 +64,7 @@ class AngeloniETL(StoreETL):
         df["title"] = df.apply(normalize_product_name, axis=1)
         df["brand"] = df["brand"].str.lower()
 
-        items = df["items"][0]
-        if items.any():
-            item = items[0]
-            seller = item["sellers"][0]
-
-            df["cartLink"] = seller["addToCartLink"]
-            
-            commertial_offer = seller["commertialOffer"];
-
-            df["price"] = commertial_offer["Price"]
-            df["oldPrice"] = commertial_offer["ListPrice"]
+        df[["cartLink", "price", "oldPrice"]] = df.apply(cls._extract_price_info, axis=1)
 
         df.drop(["brandId", "brandImageUrl",
                 "productReference", "productReferenceCode", "categoryId", 
@@ -145,3 +135,21 @@ class AngeloniETL(StoreETL):
             except Exception as e:
                 print(str(e))
                 print("Erro ao coletar produto: ", url, " Status: ", response.status)
+
+    @classmethod
+    def _extract_price_info(cls, row):
+        items = row["items"]
+
+        if not items.any():
+            return pd.Series({"cartLink": None, "price": None, "oldPrice": None})
+
+        item = items[0]
+        if "sellers" in item and item["sellers"]:
+            seller = item["sellers"][0]
+            commertial_offer = seller.get("commertialOffer", {})
+
+            return pd.Series({
+                "cartLink": seller.get("addToCartLink", None),
+                "price": commertial_offer.get("Price", None),
+                "oldPrice": commertial_offer.get("ListPrice", None)
+            })
