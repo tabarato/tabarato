@@ -1,5 +1,5 @@
 from core.etl import StoreETL
-from core.utils.dataframe_utils import normalize_measurement, normalize_product_name
+from core.utils.dataframe_utils import transform_measurement, transform_product_name, transform_product_brand, transform_details
 import os
 import re
 import itertools
@@ -46,36 +46,33 @@ class BistekETL(StoreETL):
 
                     df.drop(["clusterHighlights", "searchableClusters"], axis=1, inplace=True)
 
+                    cls.save(df, "bronze")
+
                     return df
             except Exception as e:
                 raise e
 
         return asyncio.run(scrap())
-        
-        
+
     @classmethod
     def transform(cls, ti) -> pd.DataFrame:
         df = ti.xcom_pull(task_ids = "extract_task")
 
         df.rename(columns={"productName": "name", "productId": "refId"}, inplace=True)
-        df["name"] = df["name"].str.title()
-        df[["measure", "weight"]] = df.apply(lambda row: normalize_measurement(row, "Peso Produto", "Unidade de Medida"), axis=1)
-        df["title"] = df.apply(normalize_product_name, axis=1)
-        df["brand"] = df["brand"].str.lower()
-
+        df[["measure", "weight"]] = df.apply(lambda row: transform_measurement(row, "Peso Produto", "Unidade de Medida"), axis=1)
+        df["name"] = df.apply(transform_product_name, axis=1)
+        df["brand"] = df.apply(transform_product_brand, axis=1)
+        df[["title", "details"]] = df.apply(transform_details, axis=1)
         df[["cartLink", "price", "oldPrice"]] = df.apply(cls._extract_price_info, axis=1)
 
-        df.drop(["brandId", "brandImageUrl",
-                "productReference", "productReferenceCode", "categoryId", 
-                "metaTagDescription", "releaseDate", "productClusters",
-                "categories", "categoriesIds",
-                "Peso Produto", "Unidade de Medida", "Especificações", 
-                "allSpecifications", "allSpecificationsGroups", "description", 
-                "items", "linkText", "productTitle",
-                "Descrição do produto Genius-SEO", "Genius-SEO"], axis=1, inplace=True)
-        
+        df = df.filter(items=[
+            "name", "title", "brand", "refId",
+            "measure", "weight", "link", "cartLink",
+            "price", "oldPrice", "description", "details"
+        ])
+
         return df
-        
+
     @classmethod
     async def _process_category(cls, session: aiohttp.ClientSession):
         """Processes the URLs of the categories on the home page"""
@@ -91,7 +88,7 @@ class BistekETL(StoreETL):
             hrefs = [(cls.main_page_url + href)for href in hrefs if len(href.split("/")) == 3]
 
             return hrefs
-    
+
     @classmethod
     async def _process_category_pagination(cls, session: aiohttp.ClientSession, url: str):
         async with session.get(url) as response:
@@ -124,7 +121,7 @@ class BistekETL(StoreETL):
             except Exception as e:
                 print(str(e))
                 print("Erro ao coletar id: ", url, " Status: ", response.status)
-    
+
     @classmethod
     async def _collect_product_data(cls, session: aiohttp.ClientSession, url: str):
         """Collect data from the product in JSON format."""

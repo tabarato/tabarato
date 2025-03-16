@@ -7,7 +7,7 @@ from airflow.operators.python import PythonOperator
 
 sys.path.append('/opt/airflow/dags/core')
 
-with DAG("angeloni_dag", start_date = datetime(2025, 3, 8), schedule_interval = "0 3 * * *", catchup = False) as dag:
+with DAG("angeloni_dag", start_date = datetime(2025, 3, 15), schedule_interval = "0 3 * * *", catchup = False) as dag:
     extract_task = PythonOperator(
         task_id = "extract_task",
         python_callable = AngeloniETL.extract

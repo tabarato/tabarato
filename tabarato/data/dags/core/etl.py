@@ -46,7 +46,12 @@ class StoreETL(ABC):
 
         # client.close()
 
-        path = "/opt/airflow/data/silver"
+        cls.save(df, "silver")
+
+    @classmethod
+    @abstractmethod
+    def save(cls, df, layer) -> None:
+        path = f"/opt/airflow/data/{layer}"
 
         pathlib.Path(path).mkdir(parents=True, exist_ok=True)
         
