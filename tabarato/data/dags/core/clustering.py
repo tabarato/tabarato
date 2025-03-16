@@ -1,4 +1,4 @@
-from core.utils.string_utils import tokenize, object_id, timestamp
+from core.utils.dataframe_utils import tokenize
 import json
 import numpy as np
 import os
@@ -24,7 +24,7 @@ class Clustering:
         )
 
         df.dropna(subset=["name"], inplace=True)
-        df["tokens"] = df["title"].apply(lambda x: tokenize(x, words_to_ignore=["lata"]))
+        df["tokens"] = df.apply(tokenize, axis=1)
 
         brand_mapping = {brand: idx for idx, brand in enumerate(df["brand"].unique())}
         df["brand_encoded"] = df["brand"].map(brand_mapping)
@@ -58,10 +58,7 @@ class Clustering:
             "cartLink": list
         }).reset_index()
 
-        df_grouped["variations"] = df_grouped.apply(
-            cls._group_variations,
-            axis=1
-        )
+        df_grouped["variations"] = df_grouped.apply(cls._group_variations, axis=1)
 
         df_grouped.drop(columns=["weight", "measure", "storeSlug", "price", "oldPrice", "link", "cartLink"], inplace=True)
 

@@ -1,5 +1,5 @@
 from core.etl import StoreETL
-from core.utils.dataframe_utils import normalize_measurement, normalize_product_name
+from core.utils.dataframe_utils import transform_measurement, transform_product_name, transform_product_brand, transform_details
 import os
 import re
 import itertools
@@ -34,7 +34,7 @@ class AngeloniETL(StoreETL):
 
                     categories_url_pages = await asyncio.gather(*categories_url_pages_tasks)
                     categories_url_pages = list(itertools.chain.from_iterable(categories_url_pages))
-                    print(categories_url_pages)
+
                     products_url_tasks = [cls._collect_product_id(session=session, url=url) for url in categories_url_pages]
                     products_url = await asyncio.gather(*products_url_tasks)
                     products_url = list(set(itertools.chain.from_iterable(filter(None, products_url))))
@@ -47,35 +47,33 @@ class AngeloniETL(StoreETL):
 
                     df.drop(["clusterHighlights", "searchableClusters"], axis=1, inplace=True)
 
+                    cls.save(df, "bronze")
+
                     return df
             except Exception as e:
                 raise e
 
         return asyncio.run(scrap())
-        
-        
+
     @classmethod
     def transform(cls, ti) -> pd.DataFrame:
         df = ti.xcom_pull(task_ids = "extract_task")
 
         df.rename(columns={"productName": "name", "productId": "refId"}, inplace=True)
-        df["name"] = df["name"].str.title()
-        df[["measure", "weight"]] = df.apply(lambda row: normalize_measurement(row, "Quantidade da embalagem", "Unidade de medida"), axis=1)
-        df["title"] = df.apply(normalize_product_name, axis=1)
-        df["brand"] = df["brand"].str.lower()
-
+        df[["measure", "weight"]] = df.apply(lambda row: transform_measurement(row, "Quantidade da embalagem", "Unidade de medida"), axis=1)
+        df["name"] = df.apply(transform_product_name, axis=1)
+        df["brand"] = df.apply(transform_product_brand, axis=1)
+        df[["title", "details"]] = df.apply(transform_details, axis=1)
         df[["cartLink", "price", "oldPrice"]] = df.apply(cls._extract_price_info, axis=1)
 
-        df.drop(["brandId", "brandImageUrl",
-                "productReference", "productReferenceCode", "categoryId", 
-                "metaTagDescription", "releaseDate", "productClusters",
-                "categories", "categoriesIds",
-                "Quantidade da embalagem", "Unidade de medida",
-                "allSpecifications", "allSpecificationsGroups", "description", 
-                "items", "linkText", "productTitle"], axis=1, inplace=True)
-        
+        df = df.filter(items=[
+            "name", "title", "brand", "refId",
+            "measure", "weight", "link", "cartLink",
+            "price", "oldPrice", "description", "details"
+        ])
+
         return df
-        
+
     @classmethod
     async def _process_category(cls, session: aiohttp.ClientSession):
         """Processes the URLs of the categories on the home page"""
@@ -90,17 +88,24 @@ class AngeloniETL(StoreETL):
             hrefs = [(cls.main_page_url + href) for href in hrefs if len(href.split("/")) == 3]
 
             return hrefs
-    
+
     @classmethod
-    async def _process_category_pagination(cls, session: aiohttp.ClientSession, url: str):
+    async def _process_category_pagination(cls, session: aiohttp.ClientSession, url: str, collected_urls: list=None):
+        if collected_urls is None:
+            collected_urls = []
+
+        collected_urls.append(url)
+        
         async with session.get(url) as response:
-            soup = BeautifulSoup(await response.text(), 'html.parser')
+            soup = BeautifulSoup(await response.text(), "html.parser")
+
             show_more = soup.find_all("div", class_="vtex-search-result-3-x-buttonShowMore vtex-search-result-3-x-buttonShowMore--result-content--fetchmore")
             if not show_more:
-                return [url]
+                return collected_urls
 
             next_href = show_more[-1].find("a").get("href")
-            return await cls._process_category_pagination(session, url + next_href)
+
+            return await cls._process_category_pagination(session, url + next_href, collected_urls)
 
     @classmethod
     async def _collect_product_id(cls, session: aiohttp.ClientSession, url: str):
@@ -123,7 +128,7 @@ class AngeloniETL(StoreETL):
             except Exception as e:
                 print(str(e))
                 print("Erro ao coletar id: ", url, " Status: ", response.status)
-    
+
     @classmethod
     async def _collect_product_data(cls, session: aiohttp.ClientSession, url: str):
         """Collect data from the product in JSON format."""
