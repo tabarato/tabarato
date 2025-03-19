@@ -4,7 +4,7 @@ Create a `.env` file at the root directory with the following values:
 
 ```
 AIRFLOW_UID="1000"
-AIRFLOW_PROJ_DIR="./tabarato/data"
+AIRFLOW_PROJ_DIR="./src/data"
 AIRFLOW_OUTPUT_DIR="./data"
 BISTEK_BASE_URL="https://www.bistek.com.br"
 BISTEK_PRODUCT_DETAILS_URL="https://www.bistek.com.br/api/catalog_system/pub/products/search/?fq=productId:{id}"
