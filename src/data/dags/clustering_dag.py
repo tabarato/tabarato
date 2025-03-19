@@ -16,7 +16,7 @@ default_args = {
     'retry_delay': timedelta(minutes=5),
 }
 
-with DAG('clustering_dag', default_args = default_args, schedule_interval = "0 4 * * *") as dag:
+with DAG('clustering_dag', default_args = default_args, schedule_interval = None) as dag:
     # wait_for_bistek_dag_task = ExternalTaskSensor(
     #     task_id = 'wait_for_bistek_dag_task',
     #     external_dag_id = 'bistek_dag',
