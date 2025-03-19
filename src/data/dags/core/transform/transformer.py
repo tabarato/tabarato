@@ -46,7 +46,15 @@ class Transformer(ABC):
         "balde",
         "galao",
         "tubo",
-        "ampola"
+        "ampola",
+        "pote"
+    ]
+    UNIT = [
+        "unidades",
+        "unidade",
+        "unidadaes",
+        r"un\.",
+        "un"
     ]
 
     @classmethod
@@ -86,7 +94,7 @@ class Transformer(ABC):
 
         ignore_patterns = [
             r"\b\d+(?:[.,]\d+)?\s*(?:" + "|".join(cls.MEASUREMENT) + r")\b\.?\b",
-            r"\b(tradicional)\b",
+            r"\b(tradicional|trad\.|trad)\b",
             r"\d+%\w+\.?"
         ]
 
@@ -97,7 +105,7 @@ class Transformer(ABC):
             r"\bp/(?!\s?\d)": "para ",
             r"\bs/(?!\s?\d)": "sem ",
             r"\bc/(?!\s?\d)": "com ",
-            r"\b\s?/\s?(?!\s?\d)": " com "
+            r"\b\s?/\s?(?!\s?\d)": " e "
         }
 
         for pattern, replacement in replace_patterns.items():
@@ -105,7 +113,6 @@ class Transformer(ABC):
 
         name = re.sub(r"(?<!\d)\.(?!\d)", ". ", name)
         name = strip_all(name)
-        name = " ".join(dict.fromkeys(name.split()))
         name = unidecode(name)
 
         return name.title()
@@ -139,17 +146,23 @@ class Transformer(ABC):
                 name = name.replace(detail, "")
                 details["packaging"].append(detail)
 
-        unit_pattern = r"(?:c/|com)\s*(\d+(?:/\d+)?)(?:\s*(?:unidades|unidade|un))?"  
+        unit_pattern = r"(?:c/|com)\s*(\d+(?:/\d+)?)(?:\s*(?:" + "|".join(cls.UNIT) + r"))?"  
         unit_match = re.search(unit_pattern, name, re.IGNORECASE)
         if unit_match:
             details["units"] = [int(u) for u in unit_match.group(1).split("/") if u.isdigit()]
             name = name.replace(unit_match.group(0), "").strip()
         else:
-            unit_pattern = r"(\d+(?:/\d+)?)(?:\s*(?:unidades|unidade|un))?"
+            unit_pattern = r"(\d+(?:/\d+)?)(?:\s*(?:unidades|unidade|unidadaes|un))?(?!\s*\w)"
             unit_match = re.search(unit_pattern, name, re.IGNORECASE)
             if unit_match:
                 details["units"] = [int(u) for u in unit_match.group(1).split("/") if u.isdigit()]
                 name = name.replace(unit_match.group(0), "").strip()
+            else:
+                unit_pattern = "|".join(cls.UNIT)
+                unit_match = re.search(unit_pattern, name, re.IGNORECASE)
+                if unit_match:
+                    details["units"] = [1]
+                    name = name.replace(unit_match.group(0), "").strip()
 
         name = strip_all(name)
 

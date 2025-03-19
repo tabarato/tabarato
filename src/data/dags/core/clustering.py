@@ -1,4 +1,4 @@
-from core.utils.string_utils import strip_all, get_words
+from core.utils.string_utils import strip_all, get_words, replace_full_word
 from core.loader import Loader
 from collections import Counter
 import json
@@ -7,6 +7,8 @@ import os
 import re
 import requests
 import pandas as pd
+from gensim.models import Word2Vec
+from gensim.utils import simple_preprocess
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.preprocessing import StandardScaler
 from scipy.spatial.distance import pdist
@@ -20,7 +22,7 @@ class Clustering:
         df = Loader.read("silver")
 
         df.dropna(subset=["name"], inplace=True)
-        df["name"] = cls._normalize_names(df["name"])
+        df["name"] = cls._normalize_names(df)
         df = cls._correct_brands(df)
         df["tokens"] = df.apply(cls._tokenize, axis=1)
 
@@ -119,64 +121,113 @@ class Clustering:
         return df
 
     @classmethod
-    def _normalize_names(cls, names: pd.Series) -> list:
-        word_frequencies, bigram_frequencies = cls._compute_word_frequencies(names)
-        abbreviations = cls._extract_abbreviations(names)
+    def _normalize_names(cls, df: pd.DataFrame) -> list:
+        names = df["name"]
+        brands = df["brand"]
 
-        normalized = [cls._normalize_abbreviations(name, word_frequencies, bigram_frequencies, abbreviations) for name in names]
+        words_sentences = cls._get_words_sentences(names)
+        abbreviations = cls._get_abbreviations(names)
+
+        tokenized_sentences = [simple_preprocess(sent) for sent in names]
+        model = Word2Vec(sentences=tokenized_sentences, vector_size=100, window=5, min_count=2, epochs=20)
+
+        normalized = cls._normalize_abbreviations(names, brands, words_sentences, model)
         
+        tokenized_sentences = [simple_preprocess(sent) for sent in normalized]
+        model.build_vocab(tokenized_sentences, update=True)
+        model.train(tokenized_sentences, total_examples=len(tokenized_sentences), epochs=10)
+
+        normalized = cls._normalize_possible_abbreviations(normalized, brands, words_sentences, abbreviations, model)
+
         return normalized
 
     @classmethod
-    def _compute_word_frequencies(cls, names: pd.Series) -> Counter | Counter:
-        word_frequencies = Counter()
-        bigram_frequencies = Counter()
+    def _get_words_sentences(cls, names: pd.Series):
+        words_sentences = {}
         
         for name in names:
             words = get_words(name.lower())
             for i, word in enumerate(words):
-                if not word.endswith('.'):
-                    word_frequencies[word] += 1
-                
-                if i < len(words) - 1:
-                    bigram = (word, words[i + 1])
-                    bigram_frequencies[bigram] += 1
-                    
-        return word_frequencies, bigram_frequencies
+                if not word.endswith('.') and len(word) > 1:
+                    if words_sentences.get(word):
+                        words_sentences[word].append(name.lower())
+                    else:
+                        words_sentences[word] = [name.lower()]
+
+        return words_sentences
 
     @classmethod
-    def _extract_abbreviations(cls, names: pd.Series) -> set:
-        abbreviations = set()
-        for name in names:
-            words = get_words(name.lower())
-            for word in words:
+    def _get_abbreviations(cls, names: pd.Series):
+        return {word[:-1] for name in names for word in get_words(name.lower()) if word.endswith('.')}
+
+    @classmethod
+    def _normalize_abbreviations(cls, names, brands, words_sentences: dict, model):
+        normalized_names = []
+
+        for i, name in enumerate(names):
+            brand = brands.iloc[i]
+            normalized_brand = brand.replace("-", " ")
+            words = get_words(name.lower().replace(normalized_brand, "{brand}"))
+
+            for i, word in enumerate(words):
+                if word == "{brand}":
+                    continue
+
                 if word.endswith('.'):
-                    abbreviations.add(word[:-1])
-        return abbreviations
+                    abbreviation = word.rstrip('.')
+                    matches = [w for w in words_sentences.keys() if w.startswith(abbreviation) and w != abbreviation]
+                    words[i] = cls._normalize_abbreviation(words_sentences, matches, name, word, model)
+
+            normalized_names.append(" ".join(words).replace("{brand}", normalized_brand).title())
+
+        return normalized_names
+    
+    @classmethod
+    def _normalize_possible_abbreviations(cls, names, brands, words_sentences: dict, abbreviations, model):
+        normalized_names = []
+
+        for i, name in enumerate(names):
+            brand = brands.iloc[i]
+            normalized_brand = brand.replace("-", " ")
+            words = get_words(name.lower().replace(normalized_brand, "{brand}"))
+
+            for i, word in enumerate(words):
+                if word == "{brand}":
+                    continue
+
+                if word in abbreviations and len(word) > 1:
+                    abbreviation = word.rstrip('.')
+                    matches = [w for w in words_sentences.keys() if w.startswith(abbreviation)]
+                    best_match = cls._normalize_abbreviation(words_sentences, matches, name, word, model, reduce_equal_boost=0.04)
+                    if word != best_match:
+                        print(name, "|", word, "|", best_match)
+                    words[i] = best_match
+
+            normalized_names.append(" ".join(words).replace("{brand}", normalized_brand).title())
+
+        return normalized_names
 
     @classmethod
-    def _normalize_abbreviations(cls, name: str, word_frequencies: Counter, bigram_frequencies: Counter, abbreviations: set) -> str:
-        words = get_words(name.lower())
-        for i, word in enumerate(words):
-            if word.endswith('.') or word in abbreviations:
-                base = word.rstrip('.')
-                next_word = words[i + 1] if i + 1 < len(words) else None
-                words[i] = cls._normalize_abbreviation(word_frequencies, bigram_frequencies, word, base, next_word)
+    def _normalize_abbreviation(cls, words_sentences, matches, name, word, model, reduce_equal_boost = None):
+        if not matches:
+            return word
 
-        return " ".join(words).title()
+        similarities = []
+        for match in matches:
+            if match in model.wv:
+                sentences = words_sentences[match]
+                for sentence in sentences:
+                    similarity = model.wv.n_similarity(replace_full_word(name.lower(), word, match).split(), sentence.split())
 
-    @classmethod
-    def _normalize_abbreviation(cls, word_frequencies: Counter, bigram_frequencies: Counter, word: str, abbreviation: str, next_word: str) -> str:
-        matches = [w for w in word_frequencies if w.startswith(abbreviation)]
+                    if similarity > 0.8:
+                        if match == word and reduce_equal_boost:
+                            similarity -= reduce_equal_boost
 
-        if next_word:
-            bigram_candidates = [(w, next_word) for w in matches if (w, next_word) in bigram_frequencies]
-            if bigram_candidates:
-                return max(bigram_candidates, key=lambda bg: bigram_frequencies[bg])[0]
+                        similarities.append((match, similarity))
 
-        if matches:
-            return max(matches, key=lambda w: word_frequencies[w])
-        
+        if similarities:
+            return max(similarities, key=lambda sc: sc[1])[0]
+
         return word
 
     @classmethod
