@@ -8,14 +8,16 @@ from abc import ABC, abstractmethod
 from unidecode import unidecode
 
 class Transformer(ABC):
-    MEASUREMENT = [
+    LIQUID_MEASUREMENT = [
         "mililitros",
         "mililitro",
         "ml",
         "litros",
         "litro",
         "lt",
-        "l",
+        "l"
+    ]
+    SOLID_MEASUREMENT = [
         "quilogramas",
         "quilograma",
         "quilos",
@@ -25,7 +27,8 @@ class Transformer(ABC):
         "grama",
         "g"
     ]
-    PACKAGING = [
+    MEASUREMENT = LIQUID_MEASUREMENT + SOLID_MEASUREMENT
+    DETAILS = [
         "lata",
         "vd",
         "pct",
@@ -47,7 +50,11 @@ class Transformer(ABC):
         "galao",
         "tubo",
         "ampola",
-        "pote"
+        "pote",
+        "kg",
+        "litro",
+        "lt",
+        "l",
     ]
     UNIT = [
         "unidades",
@@ -93,9 +100,14 @@ class Transformer(ABC):
         name = row["name"].lower()
 
         ignore_patterns = [
+            r"(?:leve\s(?:\w+|\+)\s)?pague\s(?:\w+|\-)",
+            r"l\+p\-",
             r"\b\d+(?:[.,]\d+)?\s*(?:" + "|".join(cls.MEASUREMENT) + r")\b\.?\b",
             r"\b(tradicional|trad\.|trad)\b",
-            r"\d+%\w+\.?"
+            r"\d+%\w+\.?",
+            r"(?:c/|com)\s*(\d+(?:/\d+)?)(?:\s*(?:" + "|".join(cls.UNIT) + r"))?",
+            r"(\d+(?:/\d+)?)(?:\s*(?:" + "|".join(cls.UNIT) + r"))(?!\s*\w)",
+            "|".join(cls.UNIT)
         ]
 
         for pattern in ignore_patterns:
@@ -132,37 +144,16 @@ class Transformer(ABC):
     def _transform_details(cls, row: pd.Series) -> pd.Series:
         name = row["name"]
 
-        details = {
-            "packaging": [],
-            "units": []
-        }
+        details = []
 
-        packaging_pattern = r"(?<!^)\b(\d+(?:[.,]\d+)?)?\s*(" + "|".join(cls.PACKAGING) + "|" + "|".join(cls.MEASUREMENT) + r")\b\.?\b"
-        matches = re.findall(packaging_pattern, name, re.IGNORECASE)
+        details_pattern = r"(?<!^)\b(\d+(?:[.,]\d+)?)?\s*(" + "|".join(cls.DETAILS) + r")\b\.?\b"
+        matches = re.findall(details_pattern, name, re.IGNORECASE)
 
         if matches:
             for match in matches:
                 detail = strip_all(" ".join(match))
                 name = name.replace(detail, "")
-                details["packaging"].append(detail)
-
-        unit_pattern = r"(?:c/|com)\s*(\d+(?:/\d+)?)(?:\s*(?:" + "|".join(cls.UNIT) + r"))?"  
-        unit_match = re.search(unit_pattern, name, re.IGNORECASE)
-        if unit_match:
-            details["units"] = [int(u) for u in unit_match.group(1).split("/") if u.isdigit()]
-            name = name.replace(unit_match.group(0), "").strip()
-        else:
-            unit_pattern = r"(\d+(?:/\d+)?)(?:\s*(?:unidades|unidade|unidadaes|un))?(?!\s*\w)"
-            unit_match = re.search(unit_pattern, name, re.IGNORECASE)
-            if unit_match:
-                details["units"] = [int(u) for u in unit_match.group(1).split("/") if u.isdigit()]
-                name = name.replace(unit_match.group(0), "").strip()
-            else:
-                unit_pattern = "|".join(cls.UNIT)
-                unit_match = re.search(unit_pattern, name, re.IGNORECASE)
-                if unit_match:
-                    details["units"] = [1]
-                    name = name.replace(unit_match.group(0), "").strip()
+                details.append(detail)
 
         name = strip_all(name)
 
@@ -186,13 +177,11 @@ class Transformer(ABC):
             weight = None
             measure = None
 
-        valid_solid_measures = ["g", "kg", "grama", "quilo", "quilograma"]
-        valid_liquid_measures = ["ml", "l", "lt", "litro", "mililitro"]
-
-        if not weight or not measure or math.isnan(weight) or (measure not in valid_solid_measures and measure not in valid_liquid_measures):
-            product_name = row["name"]
-            solid_match = re.search(f"(\d+)\s*({'|'.join(valid_solid_measures)})", product_name, re.IGNORECASE)
-            liquid_match = re.search(f"(\d+)\s*({'|'.join(valid_liquid_measures)})", product_name, re.IGNORECASE)
+        if not weight or not measure or math.isnan(weight) or (measure not in cls.SOLID_MEASUREMENT and measure not in cls.LIQUID_MEASUREMENT and measure not in cls.UNIT):
+            name = row["name"]
+            solid_match = re.search(f"(\d+)\s*({'|'.join(cls.SOLID_MEASUREMENT)})", name, re.IGNORECASE)
+            liquid_match = re.search(f"(\d+)\s*({'|'.join(cls.LIQUID_MEASUREMENT)})", name, re.IGNORECASE)
+            unit_match = re.search(f"(\d+)\s*({'|'.join(cls.UNIT)})", name, re.IGNORECASE)
 
             if solid_match:
                 weight = float(solid_match.group(1))
@@ -201,8 +190,28 @@ class Transformer(ABC):
                 weight = float(liquid_match.group(1))
                 measure = str(liquid_match.group(2)).lower()
             else:
-                weight = 0
-                measure = ""
+                unit_pattern = r"(?:c/|com)\s*(\d+(?:/\d+)?)(?:\s*(?:" + "|".join(cls.UNIT) + r"))?"  
+                unit_match = re.search(unit_pattern, name, re.IGNORECASE)
+                units = []
+                if unit_match:
+                    units = [int(u) for u in unit_match.group(1).split("/") if u.isdigit()]
+                else:
+                    unit_pattern = r"(\d+(?:/\d+)?)(?:\s*(?:" + "|".join(cls.UNIT) + r"))(?!\s*\w)"
+                    unit_match = re.search(unit_pattern, name, re.IGNORECASE)
+                    if unit_match:
+                        units = [int(u) for u in unit_match.group(1).split("/") if u.isdigit()]
+                    else:
+                        unit_pattern = "|".join(cls.UNIT)
+                        unit_match = re.search(unit_pattern, name, re.IGNORECASE)
+                        if unit_match:
+                            units = [1]
+
+                if units:
+                    weight = units[-1]
+                    measure = "un"
+                else:
+                    weight = 0
+                    measure = ""
 
         if measure == "kg" or measure == "quilo" or measure == "quilograma":
             weight *= 1000
