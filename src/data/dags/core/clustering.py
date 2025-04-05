@@ -1,6 +1,5 @@
 from core.utils.string_utils import strip_all, get_words, replace_full_word
 from core.loader import Loader
-from collections import Counter
 import json
 import numpy as np
 import os
@@ -8,46 +7,50 @@ import re
 import requests
 import pandas as pd
 from gensim.models import Word2Vec
-from gensim.utils import simple_preprocess
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.preprocessing import StandardScaler
+import nltk
+from nltk.corpus import stopwords
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from scipy.spatial.distance import pdist
 from scipy.cluster.hierarchy import fcluster, linkage
 
+nltk.download('stopwords')
+
 class Clustering:
     ELASTICSEARCH_URL = os.getenv("ELASTICSEARCH_URL")
+    PORTUGUESE_STOPWORDS = set(stopwords.words('portuguese'))
     
     @classmethod
     def process(cls, ti) -> pd.DataFrame:
         df = Loader.read("silver")
 
         df.dropna(subset=["name"], inplace=True)
-        df["name"] = cls._normalize_names(df)
+
+        tokenized_sentences = df.apply(cls._tokenize, axis=1).tolist()
+        model = Word2Vec(sentences=tokenized_sentences, vector_size=128, window=8, min_count=2, workers=4, epochs=20)
+
+        # TODO: melhorar matching, ainda não está 100%
+        df["name"] = cls._normalize_names(df, model)
         df = cls._correct_brands(df)
-        df["tokens"] = df.apply(cls._tokenize, axis=1)
 
-        # brand_mapping = {brand: idx for idx, brand in enumerate(df["brand"].unique())}
-        # df["brand_encoded"] = df["brand"].map(brand_mapping)
+        tokenized_sentences = df.apply(cls._tokenize, axis=1).tolist()
+        sentence_vectors = np.array([cls._get_sentence_vector(tokens, model) for tokens in tokenized_sentences])
 
-        # vectorizer = CountVectorizer(tokenizer=lambda x: x.split(), lowercase=True, binary=True)
-        # product_name_features = vectorizer.fit_transform(df["name"]).toarray()
+        name_scaler = StandardScaler()
+        name_scaled = name_scaler.fit_transform(sentence_vectors)
 
-        # scaler = StandardScaler()
-        # numeric_features = scaler.fit_transform(df[["weight", "brand_encoded"]])
+        brand_scaler = OneHotEncoder(sparse_output=False)
+        brand_features = brand_scaler.fit_transform(df[["brand"]])
 
-        # features = np.hstack((product_name_features, numeric_features))
+        features = np.hstack((name_scaled, brand_features))
+        distance_matrix = pdist(features, metric="euclidean")
+        linkage_matrix = linkage(distance_matrix, method="ward")
+        threshold = 1.0
+        cluster_labels = fcluster(linkage_matrix, t=threshold, criterion="distance")
 
-        # distance_matrix = pdist(features, metric="euclidean")
-        # linkage_matrix = linkage(distance_matrix, method="ward")
+        df["cluster"] = cluster_labels
 
-        # distance_threshold = 1.0  
-        # cluster_labels = fcluster(linkage_matrix, distance_threshold, criterion="distance")
-
-        # df["cluster"] = cluster_labels
-
-        df_grouped = df.groupby(["brand", "tokens"]).agg({
+        df_grouped = df.groupby(["brand", "cluster"]).agg({
             "name": "first",
-            # "cluster": "first",
             "storeSlug": list,
             "weight": list,
             "measure": list,
@@ -58,7 +61,6 @@ class Clustering:
         }).reset_index()
 
         df_grouped["variations"] = df_grouped.apply(cls._group_variations, axis=1)
-
         df_grouped.drop(columns=["weight", "measure", "storeSlug", "price", "oldPrice", "link", "cartLink"], inplace=True)
 
         return df_grouped
@@ -121,23 +123,16 @@ class Clustering:
         return df
 
     @classmethod
-    def _normalize_names(cls, df: pd.DataFrame) -> list:
+    def _normalize_names(cls, df: pd.DataFrame, model: Word2Vec) -> list:
         names = df["name"]
         brands = df["brand"]
 
         words_sentences = cls._get_words_sentences(names)
         abbreviations = cls._get_abbreviations(names)
 
-        tokenized_sentences = [simple_preprocess(sent) for sent in names]
-        model = Word2Vec(sentences=tokenized_sentences, vector_size=100, window=5, min_count=2, epochs=20)
-
         normalized = cls._normalize_abbreviations(names, brands, words_sentences, model)
-        
-        tokenized_sentences = [simple_preprocess(sent) for sent in normalized]
-        model.build_vocab(tokenized_sentences, update=True)
-        model.train(tokenized_sentences, total_examples=len(tokenized_sentences), epochs=10)
 
-        normalized = cls._normalize_possible_abbreviations(normalized, brands, words_sentences, abbreviations, model)
+        # normalized = cls._normalize_possible_abbreviations(normalized, brands, words_sentences, abbreviations, model)
 
         return normalized
 
@@ -148,6 +143,9 @@ class Clustering:
         for name in names:
             words = get_words(name.lower())
             for i, word in enumerate(words):
+                if word in cls.PORTUGUESE_STOPWORDS:
+                    continue
+
                 if not word.endswith('.') and len(word) > 1:
                     if words_sentences.get(word):
                         words_sentences[word].append(name.lower())
@@ -176,7 +174,10 @@ class Clustering:
                 if word.endswith('.'):
                     abbreviation = word.rstrip('.')
                     matches = [w for w in words_sentences.keys() if w.startswith(abbreviation) and w != abbreviation]
-                    words[i] = cls._normalize_abbreviation(words_sentences, matches, name, word, model)
+                    best_match = cls._normalize_abbreviation(matches, word, abbreviation, model, words, i)
+                    # if word != best_match:
+                    #     print(name, "|", word, "|", best_match)
+                    words[i] = best_match
 
             normalized_names.append(" ".join(words).replace("{brand}", normalized_brand).title())
 
@@ -198,7 +199,7 @@ class Clustering:
                 if word in abbreviations and len(word) > 1:
                     abbreviation = word.rstrip('.')
                     matches = [w for w in words_sentences.keys() if w.startswith(abbreviation)]
-                    best_match = cls._normalize_abbreviation(words_sentences, matches, name, word, model, reduce_equal_boost=0.04)
+                    best_match = cls._normalize_abbreviation(matches, word, abbreviation, model, words, i)
                     if word != best_match:
                         print(name, "|", word, "|", best_match)
                     words[i] = best_match
@@ -208,35 +209,64 @@ class Clustering:
         return normalized_names
 
     @classmethod
-    def _normalize_abbreviation(cls, words_sentences, matches, name, word, model, reduce_equal_boost = None):
-        if not matches:
+    def _normalize_abbreviation(cls, matches, word, abbreviation, model, words_list, word_index):
+        abbreviation = word.rstrip(".")
+
+        if not matches or abbreviation not in model.wv:
             return word
+
+        if words_list and word_index is not None:
+            start = max(0, word_index - 3)
+            end = min(len(words_list), word_index + 4)
+            context_words = [
+                w for w in words_list[start:word_index] + words_list[word_index+1:end]
+                if w in model.wv and w not in cls.PORTUGUESE_STOPWORDS
+            ]
+        else:
+            context_words = []
+
+        target_vec = model.wv[abbreviation]
+        context_vec = np.mean([model.wv[w] for w in context_words], axis=0) if context_words else np.zeros_like(target_vec)
+        combined_vec = (target_vec + context_vec) / 2
 
         similarities = []
         for match in matches:
             if match in model.wv:
-                sentences = words_sentences[match]
-                for sentence in sentences:
-                    similarity = model.wv.n_similarity(replace_full_word(name.lower(), word, match).split(), sentence.split())
+                similarity = model.wv.cosine_similarities(combined_vec, [model.wv[match]])[0]
+                similarities.append((match, similarity))
 
-                    if similarity > 0.8:
-                        if match == word and reduce_equal_boost:
-                            similarity -= reduce_equal_boost
+        if not similarities:
+            return word
 
-                        similarities.append((match, similarity))
+        best_match = max(similarities, key=lambda x: x[1])
+        if best_match[1] < 0.9:
+            return word
 
-        if similarities:
-            return max(similarities, key=lambda sc: sc[1])[0]
-
-        return word
+        return best_match[0]
 
     @classmethod
     def _tokenize(cls, row: pd.Series) -> str:
-        brand = row["brand"]
+        brand = row["brand"].lower()
         name = re.sub(f"\\b{re.escape(brand)}\\b", "", row["name"], flags=re.IGNORECASE)
         name = strip_all(name)
+
         words = re.findall(r"\b[a-zA-ZÀ-ÿ0-9]+\b", name.lower())
-        return "-".join(sorted(words))
+        filtered_words = [
+            word for word in words 
+            if word not in cls.PORTUGUESE_STOPWORDS
+        ]
+        
+        return filtered_words
+
+    @classmethod
+    def _get_sentence_vector(cls, tokens, model):
+        vectors = []
+        for token in tokens:
+            if token in model.wv:
+                vectors.append(model.wv[token])
+        if len(vectors) == 0:
+            return np.zeros(model.vector_size)
+        return np.mean(vectors, axis=0)
 
     @classmethod
     def _group_variations(cls, row: pd.Series) -> dict:
