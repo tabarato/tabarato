@@ -64,13 +64,13 @@ class Clustering:
 
         df["cluster"] = cluster_labels.astype(str)
 
-        threshold = 10
         df["final_cluster"] = df["cluster"].copy()
 
+        max_cluster_length = 10
         for cluster_id in df["cluster"].unique():
             cluster_mask = df["cluster"] == cluster_id
             cluster_data = df[cluster_mask]
-            if len(cluster_data) > threshold:
+            if len(cluster_data) > max_cluster_length:
                 part_after_texts = cluster_data["part_after"].tolist()
                 sub_embeddings = cls._get_bert_embeddings(part_after_texts, model, device, tokenizer)
                 if sub_embeddings is not None:
@@ -126,8 +126,22 @@ class Clustering:
         for i in range(0, len(texts), batch_size):
             batch = texts[i:i+batch_size]
             
+            # Preprocess: remove stopwords from each text
+            processed_batch = []
+            for text in batch:
+                # Split text into words while preserving original casing
+                words = get_words(text)
+                # Filter out stopwords (case-insensitive check)
+                filtered_words = [
+                    word for word in words 
+                    if word.lower() not in cls.PORTUGUESE_STOPWORDS
+                ]
+                # Rejoin remaining words into a clean text
+                processed_text = " ".join(filtered_words)
+                processed_batch.append(processed_text)
+
             inputs = tokenizer(
-                batch,
+                processed_batch,
                 padding=True,
                 truncation=True,
                 max_length=64,
