@@ -2,14 +2,16 @@ from .transformer import Transformer
 from tabarato.loader import Loader
 import pandas as pd
 
+
 class AngeloniTransformer(Transformer):
     @classmethod
     def slug(cls) -> str:
         return "angeloni"
 
     @classmethod
-    def transform(cls, ti, df: pd.DataFrame) -> pd.DataFrame:
-        
+    def transform(cls) -> pd.DataFrame:
+        df = Loader.read("bronze", cls.slug())
+
         df.rename(columns={
             "productName": "name",
             "productId": "refId",
@@ -19,13 +21,13 @@ class AngeloniTransformer(Transformer):
 
         df[["cartLink", "price", "oldPrice"]] = df.apply(cls._extract_price_info, axis=1)
 
-        return super().transform(ti, df)
+        return super().transform(df)
 
     @classmethod
     def _extract_price_info(cls, row):
         items = row["items"]
-
-        if not items:
+        
+        if not items.any():
             return pd.Series({"cartLink": None, "price": None, "oldPrice": None})
 
         item = items[0]

@@ -8,6 +8,9 @@ import codecs
 import aiohttp
 import asyncio
 from bs4 import BeautifulSoup
+import dotenv
+
+dotenv.load_dotenv()
 
 
 class BistekExtractor(Extractor):

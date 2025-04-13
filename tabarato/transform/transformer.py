@@ -7,6 +7,7 @@ import pandas as pd
 from abc import ABC, abstractmethod
 from unidecode import unidecode
 
+
 class Transformer(ABC):
     LIQUID_MEASUREMENT = [
         "mililitros",
@@ -71,7 +72,7 @@ class Transformer(ABC):
 
     @classmethod
     @abstractmethod
-    def transform(cls, ti, df: pd.DataFrame) -> pd.DataFrame:
+    def transform(cls, df: pd.DataFrame) -> pd.DataFrame:
         df[["measure", "weight"]] = df.apply(cls._transform_measurement, axis=1)
         df["name"] = df.apply(cls._transform_name, axis=1)
         df["brand"] = df.apply(cls._transform_brand, axis=1)
@@ -85,8 +86,8 @@ class Transformer(ABC):
 
     @classmethod
     @abstractmethod
-    def load(cls, ti) -> None:
-        df = ti.xcom_pull(task_ids = "transform_task")
+    def load(cls, df) -> None:
+        # df = ti.xcom_pull(task_ids = "transform_task")
         if df.empty:
             return
 
