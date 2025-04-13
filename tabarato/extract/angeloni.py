@@ -8,10 +8,15 @@ import codecs
 import aiohttp
 import asyncio
 from bs4 import BeautifulSoup
+import dotenv
+
+dotenv.load_dotenv()
+
 
 class AngeloniExtractor(Extractor):
     main_page_url=os.getenv("ANGELONI_BASE_URL")
     product_details_url=os.getenv("ANGELONI_PRODUCT_DETAILS_URL")
+
     @classmethod
     def slug(cls) -> str:
         return "angeloni"

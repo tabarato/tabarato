@@ -1,7 +1,7 @@
 from .transformer import Transformer
 from tabarato.loader import Loader
 import pandas as pd
-import json
+
 
 class BistekTransformer(Transformer):
     @classmethod
@@ -9,8 +9,9 @@ class BistekTransformer(Transformer):
         return "bistek"
 
     @classmethod
-    def transform(cls, ti, df) -> pd.DataFrame:
-        
+    def transform(cls) -> pd.DataFrame:
+        df = Loader.read("bronze", cls.slug())
+
         df.rename(columns={
             "productName": "name",
             "productId": "refId",
@@ -20,13 +21,13 @@ class BistekTransformer(Transformer):
         
         df[["cartLink", "price", "oldPrice"]] = df.apply(cls._extract_price_info, axis=1)
         
-        return super().transform(ti, df)
+        return super().transform(df)
 
     @classmethod
     def _extract_price_info(cls, row):
         items = row["items"]
 
-        if not items:
+        if not items.any():
             return pd.Series({"cartLink": None, "price": None, "oldPrice": None})
 
         item = items[0]
