@@ -26,7 +26,7 @@ if __name__ == "__main__":
     print(str(step), "|", store)
 
     if step == 1 or step == 0:
-        if store == "angeloni" or store == "":
+        if store == "angeloni" or not store == "":
             df = AngeloniExtractor.extract()
             AngeloniExtractor.load(df)
 
@@ -37,7 +37,7 @@ if __name__ == "__main__":
     if step == 2 or step == 0:
         if store == "angeloni" or store == "":
             df = AngeloniTransformer.transform()
-            AngeloniExtractor.load(df)
+            AngeloniTransformer.load(df)
  
         if store == "bistek" or store == "":
             df = BistekTransformer.transform()
