@@ -89,11 +89,12 @@ class Clustering:
             "price": list,
             "oldPrice": list,
             "link": list,
-            "cartLink": list
+            "cartLink": list,
+            "imageUrl": list
         }).reset_index()
 
         df_grouped["variations"] = df_grouped.apply(cls._group_variations, axis=1)
-        df_grouped.drop(columns=["name", "weight", "measure", "storeSlug", "price", "oldPrice", "link", "cartLink"], inplace=True)
+        df_grouped.drop(columns=["name", "weight", "measure", "storeSlug", "price", "oldPrice", "link", "cartLink", "imageUrl"], inplace=True)
 
         return df_grouped
 
@@ -104,14 +105,12 @@ class Clustering:
 
         request = ""
         for product in df.to_dict(orient="records"):
-            print(product)
             request += '{"index": {}}\n'
             request += json.dumps(product, default=lambda x: x.tolist() if isinstance(x, np.ndarray) else str(x)) + '\n'
 
         headers = {"Content-Type": "application/json"}
         response = requests.post(cls.ELASTICSEARCH_URL + "/products/_bulk", data=request, headers=headers)
 
-        print(request)
         if response.status_code != 200:
             print(response.text)
             raise Exception(response.text)
@@ -264,22 +263,29 @@ class Clustering:
     def _group_variations(cls, row: pd.Series) -> dict:
         variations = [
             {
-                "name": n, "weight": w, "measure": m, 
-                "storeSlug": s, "price": p, "oldPrice": op, "link": l, "cartLink": cl
-            } 
-            for n, w, m, s, p, op, l, cl in zip(
-                row["name"], row["weight"], row["measure"], row["storeSlug"], 
-                row["price"], row["oldPrice"], row["link"], row["cartLink"]
+                "name": n, "weight": w, "measure": m, "storeSlug": s, "price": p,
+                "oldPrice": op, "link": l, "cartLink": cl, "imageUrl": img
+            }
+            for n, w, m, s, p, op, l, cl, img in zip(
+                row["name"], row["weight"], row["measure"], row["storeSlug"],
+                row["price"], row["oldPrice"], row["link"], row["cartLink"], row["imageUrl"]
             )
         ]
 
         df = pd.DataFrame(variations)
 
-        df_grouped = df.groupby(["weight", "measure"], as_index=False).agg(
+        df_grouped = df.groupby(["weight", "measure", "name"], as_index=False).agg(
+            imageUrl=("imageUrl", "first"),  # Apenas uma imagem representativa por variação
             sellers=("storeSlug", lambda x: [
-                {"storeSlug": store, "name": name, "price": price, "oldPrice": old_price, "link": link, "cartLink": cart_link} 
-                for store, name, price, old_price, link, cart_link in zip(
-                    x, df.loc[x.index, "name"], df.loc[x.index, "price"], df.loc[x.index, "oldPrice"], 
+                {
+                    "storeSlug": store,
+                    "price": price,
+                    "oldPrice": old_price,
+                    "link": link,
+                    "cartLink": cart_link
+                }
+                for store, price, old_price, link, cart_link in zip(
+                    x, df.loc[x.index, "price"], df.loc[x.index, "oldPrice"],
                     df.loc[x.index, "link"], df.loc[x.index, "cartLink"]
                 )
             ])
