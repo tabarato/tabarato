@@ -1,4 +1,4 @@
-from core.utils.string_utils import strip_all, get_words, replace_full_word
+from core.utils.string_utils import strip_all, get_words
 from core.loader import Loader
 import json
 import numpy as np
@@ -6,35 +6,33 @@ import os
 import re
 import requests
 import pandas as pd
-from transformers import AutoTokenizer, AutoModel, pipeline
+from transformers import AutoTokenizer, AutoModel
 import torch
 from gensim.models import Word2Vec
+import matplotlib.pyplot as plt
 import nltk
 from nltk.corpus import stopwords
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from scipy.spatial.distance import pdist
 from scipy.cluster.hierarchy import fcluster, linkage
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.metrics import silhouette_score, davies_bouldin_score, calinski_harabasz_score
-import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
 
-nltk.download('stopwords')
+nltk.download("stopwords")
 
 class Clustering:
     ELASTICSEARCH_URL = os.getenv("ELASTICSEARCH_URL")
-    PORTUGUESE_STOPWORDS = set(stopwords.words('portuguese'))
+    PORTUGUESE_STOPWORDS = set(stopwords.words("portuguese"))
 
     @classmethod
     def process(cls, ti) -> pd.DataFrame:
         df = Loader.read("silver")
         df.dropna(subset=["name"], inplace=True)
 
-        df[['part_before', 'part_after']] = df.apply(
-            lambda row: cls._split_name_brand(row['name'], row['brand']), 
+        df[["partBefore", "brandName", "partAfter"]] = df.apply(
+            lambda row: cls._split_name_brand(row["name"], row["brand"]), 
             axis=1, 
-            result_type='expand'
+            result_type="expand"
         )
 
         tokenizer = AutoTokenizer.from_pretrained("neuralmind/bert-base-portuguese-cased")
@@ -42,12 +40,8 @@ class Clustering:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         model.to(device)
         model.eval()
-        
-        # pipe = pipeline('fill-mask', model=model, tokenizer=tokenizer, device=device.index if device.type == 'cuda' else -1)
 
-        # df["name"] = cls._normalize_names(df, pipe)
-
-        sentence_vectors = cls._get_bert_embeddings(df["part_before"].tolist(), model, device, tokenizer)
+        sentence_vectors = cls._get_bert_embeddings(df["partBefore"].tolist(), model, device, tokenizer)
         
         name_scaler = StandardScaler()
         name_scaled = name_scaler.fit_transform(sentence_vectors)
@@ -59,8 +53,7 @@ class Clustering:
         
         distance_matrix = pdist(features, metric="cosine")
         linkage_matrix = linkage(distance_matrix, method="ward")
-        threshold = 0.7
-        cluster_labels = fcluster(linkage_matrix, t=threshold, criterion="distance")
+        cluster_labels = fcluster(linkage_matrix, t=0.7, criterion="distance")
 
         df["cluster"] = cluster_labels.astype(str)
 
@@ -71,19 +64,23 @@ class Clustering:
             cluster_mask = df["cluster"] == cluster_id
             cluster_data = df[cluster_mask]
             if len(cluster_data) > max_cluster_length:
-                part_after_texts = cluster_data["part_after"].tolist()
-                sub_embeddings = cls._get_bert_embeddings(part_after_texts, model, device, tokenizer)
+                sub_embeddings = cls._get_bert_embeddings(cluster_data["partAfter"].tolist(), model, device, tokenizer)
                 if sub_embeddings is not None:
-                    sub_distance = pdist(sub_embeddings, metric='cosine')
-                    sub_linkage = linkage(sub_distance, method='ward')
-                    sub_clusters = fcluster(sub_linkage, t=0.7, criterion='distance')
+                    sub_distance = pdist(sub_embeddings, metric="cosine")
+                    sub_linkage = linkage(sub_distance, method="ward")
+                    sub_clusters = fcluster(sub_linkage, t=0.7, criterion="distance")
                     df.loc[cluster_mask, "final_cluster"] = [f"{cluster_id}_{sub}" for sub in sub_clusters.astype(str)]
 
-        # Atualiza os clusters finais
         df["cluster"] = df["final_cluster"].astype(str)
 
+        cls._evaluate_clusters(features, cluster_labels)
+
+        # TODO: resolver casos como da 3 corações em que clusterNames estão repetidos
+        df["clusterName"] = df["partBefore"] + " " + df["brandName"]
+
         df_grouped = df.groupby(["brand", "cluster"]).agg({
-            "name": "first",
+            "clusterName": "first",
+            "name": list,
             "storeSlug": list,
             "weight": list,
             "measure": list,
@@ -94,9 +91,7 @@ class Clustering:
         }).reset_index()
 
         df_grouped["variations"] = df_grouped.apply(cls._group_variations, axis=1)
-        df_grouped.drop(columns=["weight", "measure", "storeSlug", "price", "oldPrice", "link", "cartLink"], inplace=True)
-
-        cls.evaluate_clusters(features, cluster_labels)
+        df_grouped.drop(columns=["name", "weight", "measure", "storeSlug", "price", "oldPrice", "link", "cartLink"], inplace=True)
 
         return df_grouped
 
@@ -125,18 +120,14 @@ class Clustering:
 
         for i in range(0, len(texts), batch_size):
             batch = texts[i:i+batch_size]
-            
-            # Preprocess: remove stopwords from each text
+
             processed_batch = []
             for text in batch:
-                # Split text into words while preserving original casing
                 words = get_words(text)
-                # Filter out stopwords (case-insensitive check)
                 filtered_words = [
                     word for word in words 
                     if word.lower() not in cls.PORTUGUESE_STOPWORDS
                 ]
-                # Rejoin remaining words into a clean text
                 processed_text = " ".join(filtered_words)
                 processed_batch.append(processed_text)
 
@@ -162,22 +153,23 @@ class Clustering:
         match = re.search(brand_regex, name, flags=re.IGNORECASE)
         if match:
             part_before = name[:match.start()].strip()
+            brand_name = name[match.start():match.end()].strip()
             part_after = name[match.end():].strip()
         else:
             part_before = name.strip()
+            brand_name = ""
             part_after = ""
+
         part_before = re.sub(r'\s+', ' ', part_before)
         part_after = re.sub(r'\s+', ' ', part_after)
-        return part_before, part_after
+        return part_before, brand_name, part_after
 
     @classmethod
-    def evaluate_clusters(cls, features, labels):
-        # Métricas principais
+    def _evaluate_clusters(cls, features, labels):
         print(f"Silhouette Score: {silhouette_score(features, labels):.3f}")
         print(f"Davies-Bouldin Index: {davies_bouldin_score(features, labels):.3f}")
         print(f"Calinski-Harabasz Index: {calinski_harabasz_score(features, labels):.3f}")
 
-        # Visualização com t-SNE
         tsne = TSNE(n_components=2, random_state=42)
         reduced = tsne.fit_transform(features)
         
@@ -227,85 +219,6 @@ class Clustering:
         return df
 
     @classmethod
-    def _normalize_names(cls, df: pd.DataFrame, pipe) -> list:
-        names = df["name"].tolist()
-        brands = df["brand"].tolist()
-        texts = []
-
-        # for name, brand in zip(names, brands):
-        #     brand_regex = cls._generate_remove_brand_regex(brand)
-        #     name_without_brand = re.sub(brand_regex, "", name, flags=re.IGNORECASE).strip()
-        #     name_without_brand = re.sub(r"\s+", " ", name_without_brand)
-        #     texts.append(name_without_brand)
-
-        abbreviations = cls._get_abbreviations(pd.Series(names))
-
-        normalized = cls._normalize_abbreviations(names, brands, pipe)
-        return normalized
-
-    @classmethod
-    def _normalize_abbreviations(cls, names, brands, pipe):
-        normalized_names = []
-        
-        for name, brand in zip(names, brands):
-            # brand_regex = cls._generate_remove_brand_regex(brand)
-            # name_without_brand = re.sub(brand_regex, "", name, flags=re.IGNORECASE).strip()
-            words = get_words(name.lower())
-            
-            for i, word in enumerate(words):
-                if word.endswith('.'):
-                    abbreviation = word.rstrip('.')
-
-                    masked_sentence = ' '.join([
-                        w if idx != i else '[MASK]' for idx, w in enumerate(words)
-                    ])
-                    try:
-                        print(masked_sentence)
-                        predictions = pipe(masked_sentence, top_k=3)
-                        print(predictions)
-                        for pred in predictions:
-                            token = pred['token_str'].lower()
-                            if token != abbreviation:
-                                words[i] = token
-                                print(name, "|", abbreviation, "|", token)
-                                break
-                    except:
-                        pass
-
-            normalized_names.append(" ".join(words).title())
-        
-        return normalized_names
-
-    @classmethod
-    def _get_abbreviations(cls, names: pd.Series):
-        return {word[:-1] for name in names for word in get_words(name.lower()) if word.endswith('.')}
-
-    @classmethod
-    def _normalize_possible_abbreviations(cls, names, brands, words_sentences: dict, abbreviations, model):
-        normalized_names = []
-
-        for i, name in enumerate(names):
-            brand = brands.iloc[i]
-            normalized_brand = brand.replace("-", " ")
-            words = get_words(name.lower().replace(normalized_brand, "{brand}"))
-
-            for i, word in enumerate(words):
-                if word == "{brand}":
-                    continue
-
-                if word in abbreviations and len(word) > 1:
-                    abbreviation = word.rstrip('.')
-                    matches = [w for w in words_sentences.keys() if w.startswith(abbreviation)]
-                    best_match = cls._normalize_abbreviation(matches, word, abbreviation, model, words, i)
-                    if word != best_match:
-                        print(name, "|", word, "|", best_match)
-                    words[i] = best_match
-
-            normalized_names.append(" ".join(words).replace("{brand}", normalized_brand).title())
-
-        return normalized_names
-
-    @classmethod
     def _tokenize(cls, row: pd.Series) -> str:
         brand = row["brand"].lower()
         name = row["name"]
@@ -325,7 +238,7 @@ class Clustering:
     def _generate_remove_brand_regex(cls, brand):
         words = brand.split("-")
 
-        if words[-1].endswith('s'):
+        if words[-1].endswith("s"):
             last_word = words[-1][:-1]
             words[-1] = last_word
             s_sufix = r"(\W*s)?"
@@ -348,11 +261,11 @@ class Clustering:
     def _group_variations(cls, row: pd.Series) -> dict:
         variations = [
             {
-                "weight": w, "measure": m, 
+                "name": n, "weight": w, "measure": m, 
                 "storeSlug": s, "price": p, "oldPrice": op, "link": l, "cartLink": cl
             } 
-            for w, m, s, p, op, l, cl in zip(
-                row["weight"], row["measure"], row["storeSlug"], 
+            for n, w, m, s, p, op, l, cl in zip(
+                row["name"], row["weight"], row["measure"], row["storeSlug"], 
                 row["price"], row["oldPrice"], row["link"], row["cartLink"]
             )
         ]
@@ -361,9 +274,9 @@ class Clustering:
 
         df_grouped = df.groupby(["weight", "measure"], as_index=False).agg(
             sellers=("storeSlug", lambda x: [
-                {"storeSlug": store, "price": price, "oldPrice": old_price, "link": link, "cartLink": cart_link} 
-                for store, price, old_price, link, cart_link in zip(
-                    x, df.loc[x.index, "price"], df.loc[x.index, "oldPrice"], 
+                {"storeSlug": store, "name": name, "price": price, "oldPrice": old_price, "link": link, "cartLink": cart_link} 
+                for store, name, price, old_price, link, cart_link in zip(
+                    x, df.loc[x.index, "name"], df.loc[x.index, "price"], df.loc[x.index, "oldPrice"], 
                     df.loc[x.index, "link"], df.loc[x.index, "cartLink"]
                 )
             ])
