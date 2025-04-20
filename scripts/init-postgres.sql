@@ -1,3 +1,25 @@
+-- Create Extensions
+CREATE EXTENSION PostGIS;
+CREATE EXTENSION pgRouting;
+
+-- PgREST users
+CREATE ROLE authenticator WITH SUPERUSER;
+CREATE ROLE anon WITH SUPERUSER;
+
+-- Create an event trigger function
+CREATE OR REPLACE FUNCTION pgrst_watch() RETURNS event_trigger
+  LANGUAGE plpgsql
+  AS $$
+BEGIN
+  NOTIFY pgrst, 'reload schema';
+END;
+$$;
+
+-- This event trigger will fire after every ddl_command_end event
+CREATE EVENT TRIGGER pgrst_watch
+  ON ddl_command_end
+  EXECUTE PROCEDURE pgrst_watch();
+
 CREATE TABLE IF NOT EXISTS brands (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL UNIQUE
@@ -11,7 +33,8 @@ CREATE TABLE IF NOT EXISTS products (
 
 CREATE TABLE IF NOT EXISTS stores (
     id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL UNIQUE
+    name TEXT NOT NULL UNIQUE,
+    geometry public.GEOMETRY(POINT, 4326)
 );
 
 CREATE TABLE IF NOT EXISTS store_products (
@@ -28,14 +51,6 @@ CREATE TABLE IF NOT EXISTS store_products (
     image_url TEXT
 );
 
-INSERT INTO stores (id, name) VALUES
-(1, 'angeloni'),
-(2, 'bistek');
-
--- CREATE TABLE IF NOT EXISTS store_product_prices_history (
---     id SERIAL PRIMARY KEY,
---     id_store_product INT NOT NULL REFERENCES store_products(id),
---     price NUMERIC,
---     old_price NUMERIC,
---     date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
--- );
+INSERT INTO stores (id, name, geometry) VALUES
+(1, 'angeloni', 'POINT (-49.37666810299541 -28.680083083584385)'),
+(2, 'bistek', 'POINT (-49.36981307150592 -28.68114410287651)');
