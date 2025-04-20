@@ -1,5 +1,21 @@
 version: '3.3'
 services:
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: tabarato
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-postgres.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - elastic
+
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.7.0
     container_name: elasticsearch
@@ -25,6 +41,7 @@ services:
       - elastic
 
 volumes:
+  postgres_data:
   elasticsearch_data:
 
 networks:

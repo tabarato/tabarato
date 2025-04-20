@@ -7,7 +7,7 @@ import debounce from 'lodash.debounce';
 interface Seller {
   price: number;
   link: string;
-  storeSlug: string;
+  storeId: string;
 }
 
 interface Variation {
@@ -21,7 +21,7 @@ interface Variation {
 interface Product {
   id: string;
   brand: string;
-  clusterName: string;
+  clusteredName: string;
   variations: Variation[];
 }
 
@@ -43,7 +43,7 @@ export default function TabOneScreen() {
           bool: {
             must: {
               match: {
-                clusterName: searchText
+                clusteredName: searchText
               }
             }
           }
@@ -86,7 +86,7 @@ export default function TabOneScreen() {
       {results.map(product => (
         <Card key={product.id} style={{ marginBottom: 20, borderRadius: 12, elevation: 2 }}>
           <Card.Title
-            title={product.clusterName}
+            title={product.clusteredName}
             subtitle={`Marca: ${product.brand}`}
             titleStyle={{ fontWeight: 'bold' }}
           />
@@ -124,7 +124,7 @@ export default function TabOneScreen() {
                       <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 4 }}>
                         {variation.sellers.map((seller, i) => (
                           <Chip key={i} style={{ marginRight: 6, marginBottom: 4 }}>
-                            {seller.storeSlug}
+                            {seller.storeId}
                           </Chip>
                         ))}
                       </View>

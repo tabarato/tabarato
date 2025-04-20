@@ -47,6 +47,7 @@ pillow==11.2.1
 preshed==3.0.9
 propcache==0.3.1
 psutil==7.0.0
+psycopg2==2.9.10
 pt_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/pt_core_news_sm-3.8.0/pt_core_news_sm-3.8.0-py3-none-any.whl
 pyarrow==19.0.1
 pydantic==2.11.3

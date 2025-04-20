@@ -7,6 +7,10 @@ class AngeloniTransformer(Transformer):
     @classmethod
     def slug(cls) -> str:
         return "angeloni"
+    
+    @classmethod
+    def id(cls) -> int:
+        return 1
 
     @classmethod
     def transform(cls) -> pd.DataFrame:
