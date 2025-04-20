@@ -72,6 +72,11 @@ class Transformer(ABC):
 
     @classmethod
     @abstractmethod
+    def id(cls) -> int:
+        pass
+
+    @classmethod
+    @abstractmethod
     def transform(cls, df: pd.DataFrame) -> pd.DataFrame:
         df[["measure", "weight"]] = df.apply(cls._transform_measurement, axis=1)
         df["name"] = df.apply(cls._transform_name, axis=1)
@@ -92,7 +97,7 @@ class Transformer(ABC):
         if df.empty:
             return
 
-        df["storeSlug"] = cls.slug()
+        df["storeId"] = cls.id()
         df["insertedAt"] = dt.datetime.now(dt.timezone.utc)
 
         Loader.load(df, layer="silver", name=cls.slug())

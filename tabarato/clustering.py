@@ -6,6 +6,7 @@ import os
 import re
 import requests
 import pandas as pd
+import psycopg2
 from transformers import AutoTokenizer, AutoModel
 import torch
 import matplotlib.pyplot as plt
@@ -77,39 +78,157 @@ class Clustering:
 
         cls._evaluate_clusters(features, cluster_labels)
 
-        # TODO: resolver casos como da 3 corações em que clusterNames estão repetidos
-        df["clusterName"] = df["partBefore"] + " " + df["brandName"]
+        # TODO: resolver casos como da 3 corações em que clusteredNames estão repetidos
+        df["clusteredName"] = df["partBefore"] + " " + df["brandName"]
 
-        df_grouped = df.groupby(["brand", "cluster"]).agg({
-            "clusterName": "first",
-            "name": list,
-            "storeSlug": list,
-            "weight": list,
-            "measure": list,
-            "price": list,
-            "oldPrice": list,
-            "link": list,
-            "cartLink": list,
-            "imageUrl": list
-        }).reset_index()
-
-        df_grouped["variations"] = df_grouped.apply(cls._group_variations, axis=1)
-        df_grouped.drop(columns=["name", "weight", "measure", "storeSlug", "price", "oldPrice", "link", "cartLink", "imageUrl"], inplace=True)
-
-        return df_grouped
+        return df
 
     @classmethod
     def load(cls, df):
         # df = ti.xcom_pull(task_ids = "process_task")
-        Loader.load(df, layer="clustered", name="products")
 
-        request = ""
-        for product in df.to_dict(orient="records"):
-            request += '{"index": {}}\n'
-            request += json.dumps(product, default=lambda x: x.tolist() if isinstance(x, np.ndarray) else str(x)) + '\n'
+        records = cls._postgres_load(df)
+        products = cls._map_to_products(records)
+
+        Loader.load(pd.DataFrame(products), layer="clustered", name="products")
+
+        cls._elasticsearch_load(products)
+
+    @classmethod
+    def _postgres_load(cls, df: pd.DataFrame) -> list:
+        conn = psycopg2.connect(
+            dbname="tabarato",
+            user="postgres",
+            password="postgres",
+            host="localhost",
+            port="5432"
+        )
+        cursor = conn.cursor()
+
+        for _, row in df.iterrows():
+            cursor.execute("""
+                INSERT INTO brands (name)
+                VALUES (%s)
+                ON CONFLICT (name) DO NOTHING
+                RETURNING id;
+            """, (row["brand"],))
+            brand_result = cursor.fetchone()
+            id_brand = brand_result[0] if brand_result else None
+
+            if id_brand is None:
+                cursor.execute("SELECT id FROM brands WHERE name = %s", (row["brand"],))
+                id_brand = cursor.fetchone()[0]
+
+            cursor.execute("""
+                INSERT INTO products (clustered_name, id_brand)
+                VALUES (%s, %s)
+                ON CONFLICT (clustered_name) DO NOTHING
+                RETURNING id;
+            """, (row["clusteredName"], id_brand))
+            product_result = cursor.fetchone()
+            id_product = product_result[0] if product_result else None
+
+            if id_product is None:
+                cursor.execute("SELECT id FROM products WHERE clustered_name = %s", (row["clusteredName"],))
+                id_product = cursor.fetchone()[0]
+
+            cursor.execute("""
+                INSERT INTO store_products (
+                    id_store, id_product, name, weight, measure,
+                    price, old_price, link, cart_link, image_url
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                row["storeId"],
+                id_product,
+                row["name"],
+                row["weight"],
+                row["measure"],
+                row["price"],
+                row["oldPrice"],
+                row["link"],
+                row["cartLink"],
+                row["imageUrl"],
+            ))
+
+        conn.commit()
+
+        cursor.execute("""
+            SELECT
+                sp.id AS store_product_id,
+                sp.id_store,
+                sp.name,
+                sp.weight,
+                sp.measure,
+                sp.price,
+                sp.old_price,
+                sp.link,
+                sp.cart_link,
+                sp.image_url,
+                p.id AS product_id,
+                p.clustered_name,
+                b.name AS brand
+            FROM store_products sp
+            JOIN products p ON sp.id_product = p.id
+            JOIN brands b ON p.id_brand = b.id
+        """)
+        rows = cursor.fetchall()
+        colnames = [desc[0] for desc in cursor.description]
+        cursor.close()
+        conn.close()
+
+        return [dict(zip(colnames, row)) for row in rows]
+
+    @classmethod
+    def _map_to_products(cls, records: list) -> list:
+        products_map = {}
+        for record in records:
+            pid = record["product_id"]
+            key = (record["name"], record["weight"], record["measure"])
+
+            if pid not in products_map:
+                products_map[pid] = {
+                    "productId": pid,
+                    "clusteredName": record["clustered_name"],
+                    "brand": record["brand"],
+                    "variations": {}
+                }
+
+            product = products_map[pid]
+            if key not in product["variations"]:
+                product["variations"][key] = {
+                    "name": record["name"],
+                    "weight": record["weight"],
+                    "measure": record["measure"],
+                    "imageUrl": record["image_url"],
+                    "sellers": []
+                }
+
+            seller_data = {
+                "storeId": record["id_store"],
+                "price": float(record["price"]) if record["price"] is not None else None,
+                "oldPrice": float(record["old_price"]) if record["old_price"] is not None else None,
+                "link": record["link"],
+                "cartLink": record["cart_link"],
+                "storeProductId": record["store_product_id"]
+            }
+            product["variations"][key]["sellers"].append(seller_data)
+
+        for product in products_map.values():
+            product["variations"] = list(product["variations"].values())
+
+        return list(products_map.values())
+
+    @classmethod
+    def _elasticsearch_load(cls, products):
+        bulk_request = ""
+        for product in products:
+            meta = {"index": {"_id": product["productId"]}}
+            bulk_request += json.dumps(meta) + "\n"
+            bulk_request += json.dumps(product) + "\n"
 
         headers = {"Content-Type": "application/json"}
-        response = requests.post(cls.ELASTICSEARCH_URL + "/products/_bulk", data=request, headers=headers)
+        response = requests.post(cls.ELASTICSEARCH_URL + "/products/_bulk", data=bulk_request, headers=headers)
 
         if response.status_code != 200:
             print(response.text)
@@ -258,37 +377,3 @@ class Clustering:
         if len(vectors) == 0:
             return np.zeros(model.vector_size)
         return np.mean(vectors, axis=0)
-
-    @classmethod
-    def _group_variations(cls, row: pd.Series) -> dict:
-        variations = [
-            {
-                "name": n, "weight": w, "measure": m, "storeSlug": s, "price": p,
-                "oldPrice": op, "link": l, "cartLink": cl, "imageUrl": img
-            }
-            for n, w, m, s, p, op, l, cl, img in zip(
-                row["name"], row["weight"], row["measure"], row["storeSlug"],
-                row["price"], row["oldPrice"], row["link"], row["cartLink"], row["imageUrl"]
-            )
-        ]
-
-        df = pd.DataFrame(variations)
-
-        df_grouped = df.groupby(["weight", "measure", "name"], as_index=False).agg(
-            imageUrl=("imageUrl", "first"),  # Apenas uma imagem representativa por variação
-            sellers=("storeSlug", lambda x: [
-                {
-                    "storeSlug": store,
-                    "price": price,
-                    "oldPrice": old_price,
-                    "link": link,
-                    "cartLink": cart_link
-                }
-                for store, price, old_price, link, cart_link in zip(
-                    x, df.loc[x.index, "price"], df.loc[x.index, "oldPrice"],
-                    df.loc[x.index, "link"], df.loc[x.index, "cartLink"]
-                )
-            ])
-        )
-
-        return df_grouped.to_dict(orient="records")

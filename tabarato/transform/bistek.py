@@ -9,6 +9,10 @@ class BistekTransformer(Transformer):
         return "bistek"
 
     @classmethod
+    def id(cls) -> int:
+        return 2
+
+    @classmethod
     def transform(cls) -> pd.DataFrame:
         df = Loader.read("bronze", cls.slug())
 
