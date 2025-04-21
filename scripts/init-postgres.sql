@@ -27,8 +27,10 @@ CREATE TABLE IF NOT EXISTS brands (
 
 CREATE TABLE IF NOT EXISTS products (
     id SERIAL PRIMARY KEY,
-    clustered_name TEXT NOT NULL UNIQUE,
-    id_brand INT REFERENCES brands(id)
+    clustered_name TEXT NOT NULL,
+    id_brand INT REFERENCES brands(id),
+    weight INTEGER,
+    measure TEXT
 );
 
 CREATE TABLE IF NOT EXISTS stores (
@@ -42,8 +44,6 @@ CREATE TABLE IF NOT EXISTS store_products (
     id_store INT NOT NULL REFERENCES stores(id),
     id_product INT NOT NULL REFERENCES products(id),
     name TEXT NOT NULL,
-    weight TEXT,
-    measure TEXT,
     price NUMERIC,
     old_price NUMERIC,
     link TEXT,
