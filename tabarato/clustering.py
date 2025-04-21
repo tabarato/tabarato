@@ -24,6 +24,9 @@ dotenv.load_dotenv()
 nltk.download("stopwords")
 
 class Clustering:
+    POSTGRES_USER = os.getenv("POSTGRES_USER")
+    POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+    POSTGRES_DB = os.getenv("POSTGRES_DB")
     ELASTICSEARCH_URL = os.getenv("ELASTICSEARCH_URL")
     PORTUGUESE_STOPWORDS = set(stopwords.words("portuguese"))
 
@@ -32,11 +35,12 @@ class Clustering:
         df = Loader.read("silver")
         df.dropna(subset=["name"], inplace=True)
 
-        df[["partBefore", "brandName", "partAfter"]] = df.apply(
+        df[["part_before", "brand_name", "part_after"]] = df.apply(
             lambda row: cls._split_name_brand(row["name"], row["brand"]), 
             axis=1, 
             result_type="expand"
         )
+        df["full_text"] = df["part_before"] + " " + df["part_after"]
 
         tokenizer = AutoTokenizer.from_pretrained("neuralmind/bert-base-portuguese-cased")
         model = AutoModel.from_pretrained("neuralmind/bert-base-portuguese-cased")
@@ -44,7 +48,7 @@ class Clustering:
         model.to(device)
         model.eval()
 
-        sentence_vectors = cls._get_bert_embeddings(df["partBefore"].tolist(), model, device, tokenizer)
+        sentence_vectors = cls._get_bert_embeddings(df["full_text"].tolist(), model, device, tokenizer)
         
         name_scaler = StandardScaler()
         name_scaled = name_scaler.fit_transform(sentence_vectors)
@@ -60,26 +64,34 @@ class Clustering:
 
         df["cluster"] = cluster_labels.astype(str)
 
-        df["final_cluster"] = df["cluster"].copy()
+        # df["final_cluster"] = df["cluster"].copy()
 
-        max_cluster_length = 10
-        for cluster_id in df["cluster"].unique():
-            cluster_mask = df["cluster"] == cluster_id
-            cluster_data = df[cluster_mask]
-            if len(cluster_data) > max_cluster_length:
-                sub_embeddings = cls._get_bert_embeddings(cluster_data["partAfter"].tolist(), model, device, tokenizer)
-                if sub_embeddings is not None:
-                    sub_distance = pdist(sub_embeddings, metric="cosine")
-                    sub_linkage = linkage(sub_distance, method="ward")
-                    sub_clusters = fcluster(sub_linkage, t=0.7, criterion="distance")
-                    df.loc[cluster_mask, "final_cluster"] = [f"{cluster_id}_{sub}" for sub in sub_clusters.astype(str)]
+        # max_cluster_length = 10
+        # for cluster_id in df["cluster"].unique():
+        #     cluster_mask = df["cluster"] == cluster_id
+        #     cluster_data = df[cluster_mask]
+        #     if len(cluster_data) > max_cluster_length:
+        #         sub_embeddings = cls._get_bert_embeddings(
+        #             cluster_data["part_after"].fillna("") + " " + cluster_data["part_before"].fillna(""), 
+        #             model, 
+        #             device, 
+        #             tokenizer
+        #         )
+        #         if sub_embeddings is not None:
+        #             sub_distance = pdist(sub_embeddings, metric="cosine")
+        #             sub_linkage = linkage(sub_distance, method="ward")
+        #             sub_clusters = fcluster(sub_linkage, t=0.7, criterion="distance")
+        #             df.loc[cluster_mask, "final_cluster"] = [f"{cluster_id}_{sub}" for sub in sub_clusters.astype(str)]
 
-        df["cluster"] = df["final_cluster"].astype(str)
+        # df["cluster"] = df["final_cluster"].astype(str)
 
         cls._evaluate_clusters(features, cluster_labels)
 
         # TODO: resolver casos como da 3 corações em que clusteredNames estão repetidos
-        df["clusteredName"] = df["partBefore"] + " " + df["brandName"]
+        df["clusteredName"] = df.apply(
+            lambda row: cls._build_clustered_name(row["part_before"], row["part_after"], row["brand_name"]), 
+            axis=1
+        )
 
         return df
 
@@ -95,61 +107,85 @@ class Clustering:
         cls._elasticsearch_load(products)
 
     @classmethod
+    def _build_clustered_name(cls, part_before, part_after, brand_name):
+        main_name = f"{part_before} {brand_name}".strip()
+        if part_after and part_after.lower() not in main_name.lower():
+            return f"{main_name} {part_after}"
+        return main_name
+
+    @classmethod
     def _postgres_load(cls, df: pd.DataFrame) -> list:
         conn = psycopg2.connect(
-            dbname="tabarato",
-            user="postgres",
-            password="postgres",
+            dbname=cls.POSTGRES_DB,
+            user=cls.POSTGRES_USER,
+            password=cls.POSTGRES_PASSWORD,
             host="localhost",
             port="5432"
         )
         cursor = conn.cursor()
 
+        unique_brands = df["brand"].unique()
+        cursor.executemany("""
+            INSERT INTO brands (name)
+            VALUES (%s)
+            ON CONFLICT (name) DO NOTHING
+        """, [(b,) for b in unique_brands])
+
+        cursor.execute("SELECT id, name FROM brands WHERE name = ANY(%s)", (list(unique_brands),))
+        brand_map = {name: bid for bid, name in cursor.fetchall()}
+
+        grouped = df.groupby(["cluster", "brand", "weight", "measure"]).agg({
+            "clusteredName": "first"
+        }).reset_index()
+
+        grouped_clustered = grouped[["cluster", "brand", "weight", "measure", "clusteredName"]].rename(
+            columns={"clusteredName": "grouped_clusteredName"}
+        )
+        df = df.merge(
+            grouped_clustered,
+            on=["cluster", "brand", "weight", "measure"],
+            how="left"
+        )
+        df["clusteredName"] = df["grouped_clusteredName"]
+        df.drop(columns=["grouped_clusteredName"], inplace=True)
+
+        product_entries = [
+            (row["clusteredName"], brand_map[row["brand"]], row["weight"], row["measure"])
+            for _, row in grouped.iterrows()
+        ]
+        cursor.executemany("""
+            INSERT INTO products (clustered_name, id_brand, weight, measure)
+            VALUES (%s, %s, %s, %s)
+        """, product_entries)
+
+        clustered_params = [(row["clusteredName"], row["weight"], row["measure"]) for _, row in grouped.iterrows()]
+        cursor.execute("""
+            SELECT id, clustered_name, weight, measure 
+            FROM products 
+            WHERE (clustered_name, weight, measure) IN %s
+        """, (tuple(clustered_params),))
+        product_map = {(name, weight, measure): pid for pid, name, weight, measure in cursor.fetchall()}
+
+        store_product_rows = []
         for _, row in df.iterrows():
-            cursor.execute("""
-                INSERT INTO brands (name)
-                VALUES (%s)
-                ON CONFLICT (name) DO NOTHING
-                RETURNING id;
-            """, (row["brand"],))
-            brand_result = cursor.fetchone()
-            id_brand = brand_result[0] if brand_result else None
-
-            if id_brand is None:
-                cursor.execute("SELECT id FROM brands WHERE name = %s", (row["brand"],))
-                id_brand = cursor.fetchone()[0]
-
-            cursor.execute("""
-                INSERT INTO products (clustered_name, id_brand)
-                VALUES (%s, %s)
-                ON CONFLICT (clustered_name) DO NOTHING
-                RETURNING id;
-            """, (row["clusteredName"], id_brand))
-            product_result = cursor.fetchone()
-            id_product = product_result[0] if product_result else None
-
-            if id_product is None:
-                cursor.execute("SELECT id FROM products WHERE clustered_name = %s", (row["clusteredName"],))
-                id_product = cursor.fetchone()[0]
-
-            cursor.execute("""
-                INSERT INTO store_products (
-                    id_store, id_product, name, weight, measure,
-                    price, old_price, link, cart_link, image_url
-                )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, (
+            store_product_rows.append((
                 row["storeId"],
-                id_product,
+                product_map[(row["clusteredName"], row["weight"], row["measure"])],
                 row["name"],
-                row["weight"],
-                row["measure"],
                 row["price"],
                 row["oldPrice"],
                 row["link"],
                 row["cartLink"],
-                row["imageUrl"],
+                row["imageUrl"]
             ))
+
+        cursor.executemany("""
+            INSERT INTO store_products (
+                id_store, id_product, name,
+                price, old_price, link, cart_link, image_url
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """, store_product_rows)
 
         conn.commit()
 
@@ -158,8 +194,6 @@ class Clustering:
                 sp.id AS store_product_id,
                 sp.id_store,
                 sp.name,
-                sp.weight,
-                sp.measure,
                 sp.price,
                 sp.old_price,
                 sp.link,
@@ -167,6 +201,8 @@ class Clustering:
                 sp.image_url,
                 p.id AS product_id,
                 p.clustered_name,
+                p.weight,
+                p.measure,
                 b.name AS brand
             FROM store_products sp
             JOIN products p ON sp.id_product = p.id
@@ -181,50 +217,51 @@ class Clustering:
 
     @classmethod
     def _map_to_products(cls, records: list) -> list:
-        products_map = {}
-        for record in records:
-            pid = record["product_id"]
-            key = (record["name"], record["weight"], record["measure"])
+        grouped_products = {}
 
-            if pid not in products_map:
-                products_map[pid] = {
-                    "productId": pid,
+        for record in records:
+            key = (record["clustered_name"], record["brand"])
+            variation_key = record["product_id"]
+
+            if key not in grouped_products:
+                grouped_products[key] = {
                     "clusteredName": record["clustered_name"],
                     "brand": record["brand"],
                     "variations": {}
                 }
 
-            product = products_map[pid]
-            if key not in product["variations"]:
-                product["variations"][key] = {
+            product = grouped_products[key]
+
+            if variation_key not in product["variations"]:
+                product["variations"][variation_key] = {
+                    "productId": record["product_id"],
                     "name": record["name"],
-                    "weight": record["weight"],
+                    "weight": int(record["weight"]) if record["weight"] else None,
                     "measure": record["measure"],
                     "imageUrl": record["image_url"],
-                    "sellers": []
+                    "prices": []
                 }
 
-            seller_data = {
-                "storeId": record["id_store"],
-                "price": float(record["price"]) if record["price"] is not None else None,
-                "oldPrice": float(record["old_price"]) if record["old_price"] is not None else None,
-                "link": record["link"],
-                "cartLink": record["cart_link"],
-                "storeProductId": record["store_product_id"]
-            }
-            product["variations"][key]["sellers"].append(seller_data)
+            price = float(record["price"]) if record["price"] else None
+            if price:
+                product["variations"][variation_key]["prices"].append(price)
 
-        for product in products_map.values():
-            product["variations"] = list(product["variations"].values())
+        for product in grouped_products.values():
+            variations_list = []
+            for variation in product["variations"].values():
+                prices = variation.pop("prices")
+                variation["minPrice"] = min(prices) if prices else None
+                variation["maxPrice"] = max(prices) if prices else None
+                variations_list.append(variation)
+            product["variations"] = variations_list
 
-        return list(products_map.values())
+        return list(grouped_products.values())
 
     @classmethod
     def _elasticsearch_load(cls, products):
         bulk_request = ""
         for product in products:
-            meta = {"index": {"_id": product["productId"]}}
-            bulk_request += json.dumps(meta) + "\n"
+            bulk_request += '{"index": {}}\n'
             bulk_request += json.dumps(product) + "\n"
 
         headers = {"Content-Type": "application/json"}
@@ -274,7 +311,7 @@ class Clustering:
         match = re.search(brand_regex, name, flags=re.IGNORECASE)
         if match:
             part_before = name[:match.start()].strip()
-            brand_name = name[match.start():match.end()].strip()
+            brand_name = name[match.start():match.end()].strip().replace("-", " ")
             part_after = name[match.end():].strip()
         else:
             part_before = name.strip()

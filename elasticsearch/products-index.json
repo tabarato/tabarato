@@ -1,0 +1,69 @@
+{
+    "settings": {
+        "analysis": {
+            "tokenizer": {
+                "autocomplete_tokenizer": {
+                    "type": "edge_ngram",
+                    "min_gram": 1,
+                    "max_gram": 20,
+                    "token_chars": [
+                        "letter",
+                        "digit"
+                    ]
+                }
+            },
+            "analyzer": {
+                "autocomplete": {
+                    "type": "custom",
+                    "tokenizer": "autocomplete_tokenizer",
+                    "filter": [
+                        "lowercase"
+                    ]
+                }
+            }
+        }
+    },
+    "mappings": {
+        "properties": {
+            "clusteredName": {
+                "type": "text",
+                "analyzer": "autocomplete",
+                "search_analyzer": "standard"
+            },
+            "brand": {
+                "type": "text",
+                "analyzer": "autocomplete",
+                "search_analyzer": "standard"
+            },
+            "variations": {
+                "type": "nested",
+                "properties": {
+                    "productId": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "text",
+                        "analyzer": "autocomplete",
+                        "search_analyzer": "standard"
+                    },
+                    "weight": {
+                        "type": "integer"
+                    },
+                    "measure": {
+                        "type": "keyword"
+                    },
+                    "minPrice": {
+                        "type": "float"
+                    },
+                    "maxPrice": {
+                        "type": "float"
+                    },
+                    "imageUrl": {
+                        "type": "text",
+                        "index": false
+                    }
+                }
+            }
+        }
+    }
+}
