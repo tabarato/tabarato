@@ -3,17 +3,21 @@ import osmnx as ox
 import pandas as pd
 import geopandas as gpd
 import json
-from sqlalchemy import create_engine
 import time
+import os
+from sqlalchemy import create_engine
+from dotenv import load_dotenv
 
 def geoencoding_logradouros():
+    load_dotenv()
     city_name = 'Criciúma, Santa Catarina, Brazil'
 
-    usuario = 'postgres'
-    senha = 'postgres123'
-    host = 'localhost'
+    usuario = os.getenv('POSTGRES_USER')
+    senha = os.getenv('POSTGRES_PASSWORD')
+    host = os.getenv('POSTGRES_HOST')
     porta = 5432
-    database = 'tabarato'
+    database = os.getenv('POSTGRES_DB')
+
     conexao = f'postgresql+psycopg2://{usuario}:{senha}@{host}:{porta}/{database}'
     engine = create_engine(conexao)
 
