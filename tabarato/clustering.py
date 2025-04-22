@@ -96,6 +96,64 @@ class Clustering:
         return df
 
     @classmethod
+    def temp_process(cls) -> pd.DataFrame:
+        df = Loader.read("silver")
+        df.dropna(subset=["name"], inplace=True)
+
+        df[["partBefore", "brandName", "partAfter"]] = df.apply(
+            lambda row: cls._split_name_brand(row["name"], row["brand"]), 
+            axis=1, 
+            result_type="expand"
+        )
+
+        df['cleanedName'] = df['partBefore'] + ' ' + df['brandName'] + ' ' + df['weight'].astype(str) + df['measure'].astype(str)
+        
+        tokenizer = AutoTokenizer.from_pretrained("neuralmind/bert-base-portuguese-cased")
+        model = AutoModel.from_pretrained("neuralmind/bert-base-portuguese-cased")
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        model.to(device)
+        model.eval()
+
+        sentence_vectors = cls._get_bert_embeddings(df["cleanedName"].tolist(), model, device, tokenizer)
+        
+        name_scaler = StandardScaler()
+        name_scaled = name_scaler.fit_transform(sentence_vectors)
+
+        brand_scaler = OneHotEncoder(sparse_output=False)
+        brand_features = brand_scaler.fit_transform(df[["brand"]])
+
+        features = np.hstack((name_scaled, brand_features))
+        
+        distance_matrix = pdist(features, metric="cosine")
+        linkage_matrix = linkage(distance_matrix, method="ward")
+        cluster_labels = fcluster(linkage_matrix, t=0.7, criterion="distance")
+
+        df["cluster"] = cluster_labels.astype(str)
+
+        df["final_cluster"] = df["cluster"].copy()
+
+        max_cluster_length = 10
+        for cluster_id in df["cluster"].unique():
+            cluster_mask = df["cluster"] == cluster_id
+            cluster_data = df[cluster_mask]
+            if len(cluster_data) > max_cluster_length:
+                sub_embeddings = cls._get_bert_embeddings(cluster_data["cleanedName"].tolist(), model, device, tokenizer)
+                if sub_embeddings is not None:
+                    sub_distance = pdist(sub_embeddings, metric="cosine")
+                    sub_linkage = linkage(sub_distance, method="ward")
+                    sub_clusters = fcluster(sub_linkage, t=0.7, criterion="distance")
+                    df.loc[cluster_mask, "final_cluster"] = [f"{cluster_id}_{sub}" for sub in sub_clusters.astype(str)]
+
+        df["cluster"] = df["final_cluster"].astype(str)
+
+        cls._evaluate_clusters(features, cluster_labels)
+
+        # TODO: resolver casos como da 3 corações em que clusteredNames estão repetidos
+        df["clusteredName"] = df["cleanedName"]
+
+        return df
+
+    @classmethod
     def load(cls, df):
         # df = ti.xcom_pull(task_ids = "process_task")
 
