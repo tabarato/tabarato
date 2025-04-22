@@ -4,18 +4,13 @@ import { TextInput, Card, Text, Divider, useTheme, Chip, Button } from 'react-na
 import axios from 'axios';
 import debounce from 'lodash.debounce';
 
-interface Seller {
-  price: number;
-  link: string;
-  storeId: string;
-}
-
 interface Variation {
   weight: number;
   measure: string;
   name: string;
   imageUrl: string;
-  sellers: Seller[];
+  minPrice: number;
+  maxPrice: number;
 }
 
 interface Product {
@@ -28,7 +23,7 @@ interface Product {
 export default function TabOneScreen() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Product[]>([]);
-  const [cart, setCart] = useState<Seller[]>([]);
+  const [cart, setCart] = useState<Variation[]>([]);
   const theme = useTheme();
 
   const search = async (searchText: string) => {
@@ -42,13 +37,18 @@ export default function TabOneScreen() {
         query: {
           bool: {
             must: {
-              match: {
-                clusteredName: searchText
+              multi_match: {
+                query: searchText,
+                type: "most_fields",
+                fields: [
+                  "clusteredName^3",
+                  "brand"
+                ]
               }
             }
           }
         }
-      });
+      });      
 
       const hits = response.data.hits.hits;
       const products = hits.map((hit: any) => ({
@@ -69,8 +69,8 @@ export default function TabOneScreen() {
     debouncedSearch(text);
   };
 
-  const addToCart = (seller: Seller) => {
-    setCart(prev => [...prev, seller]);
+  const addToCart = (variation: Variation) => {
+    setCart(prev => [...prev, variation]);
   };
 
   return (
@@ -92,13 +92,10 @@ export default function TabOneScreen() {
           />
           <Card.Content>
             {product.variations.map((variation, index) => {
-              const prices = variation.sellers.map(seller => seller.price);
-              const minPrice = Math.min(...prices);
-              const maxPrice = Math.max(...prices);
               const priceDisplay =
-                minPrice === maxPrice
-                  ? `R$${minPrice.toFixed(2)}`
-                  : `R$${minPrice.toFixed(2)} - R$${maxPrice.toFixed(2)}`;
+                variation.minPrice === variation.maxPrice
+                  ? `R$${variation.minPrice.toFixed(2)}`
+                  : `R$${variation.minPrice.toFixed(2)} - R$${variation.maxPrice.toFixed(2)}`;
 
               return (
                 <View key={index} style={{ marginBottom: 16 }}>
@@ -121,16 +118,9 @@ export default function TabOneScreen() {
                       <Text style={{ marginTop: 4, fontSize: 15, fontWeight: 'bold' }}>
                         {priceDisplay}
                       </Text>
-                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 4 }}>
-                        {variation.sellers.map((seller, i) => (
-                          <Chip key={i} style={{ marginRight: 6, marginBottom: 4 }}>
-                            {seller.storeId}
-                          </Chip>
-                        ))}
-                      </View>
                       <Button
                         mode="contained-tonal"
-                        onPress={() => addToCart(variation.sellers[0])}
+                        onPress={() => addToCart(variation)}
                         style={{ marginTop: 8 }}
                       >
                         Adicionar ao carrinho
@@ -150,7 +140,7 @@ export default function TabOneScreen() {
           <Card.Content>
             {cart.map((item, index) => (
               <Text key={index} style={{ marginBottom: 6 }}>
-                • R${item.price.toFixed(2)} - {item.link}
+                • R${item.minPrice.toFixed(2)}
               </Text>
             ))}
           </Card.Content>
