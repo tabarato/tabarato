@@ -25,7 +25,7 @@
     },
     "mappings": {
         "properties": {
-            "clusteredName": {
+            "clustered_name": {
                 "type": "text",
                 "analyzer": "autocomplete",
                 "search_analyzer": "standard"
@@ -38,7 +38,7 @@
             "variations": {
                 "type": "nested",
                 "properties": {
-                    "productId": {
+                    "product_id": {
                         "type": "integer"
                     },
                     "name": {
@@ -58,7 +58,7 @@
                     "maxPrice": {
                         "type": "float"
                     },
-                    "imageUrl": {
+                    "image_url": {
                         "type": "text",
                         "index": false
                     }
