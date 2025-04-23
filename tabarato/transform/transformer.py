@@ -85,9 +85,9 @@ class Transformer(ABC):
 
         return df.filter(items=[
             "name", "brand", "refId",
-            "measure", "weight", "link", "cartLink",
-            "price", "oldPrice", "description", "details",
-            "imageUrl"
+            "measure", "weight", "link", "cart_link",
+            "price", "old_price", "description", "details",
+            "image_url"
         ])
 
     @classmethod
@@ -97,7 +97,7 @@ class Transformer(ABC):
         if df.empty:
             return
 
-        df["storeId"] = cls.id()
+        df["store_id"] = cls.id()
         df["insertedAt"] = dt.datetime.now(dt.timezone.utc)
 
         Loader.load(df, layer="silver", name=cls.slug())

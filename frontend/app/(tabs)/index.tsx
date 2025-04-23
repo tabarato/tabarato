@@ -8,15 +8,15 @@ interface Variation {
   weight: number;
   measure: string;
   name: string;
-  imageUrl: string;
-  minPrice: number;
-  maxPrice: number;
+  image_url: string;
+  min_price: number;
+  max_price: number;
 }
 
 interface Product {
   id: string;
   brand: string;
-  clusteredName: string;
+  clustered_name: string;
   variations: Variation[];
 }
 
@@ -41,7 +41,7 @@ export default function TabOneScreen() {
                 query: searchText,
                 type: "most_fields",
                 fields: [
-                  "clusteredName^3",
+                  "clustered_name^3",
                   "brand"
                 ]
               }
@@ -86,24 +86,24 @@ export default function TabOneScreen() {
       {results.map(product => (
         <Card key={product.id} style={{ marginBottom: 20, borderRadius: 12, elevation: 2 }}>
           <Card.Title
-            title={product.clusteredName}
+            title={product.clustered_name}
             subtitle={`Marca: ${product.brand}`}
             titleStyle={{ fontWeight: 'bold' }}
           />
           <Card.Content>
             {product.variations.map((variation, index) => {
               const priceDisplay =
-                variation.minPrice === variation.maxPrice
-                  ? `R$${variation.minPrice.toFixed(2)}`
-                  : `R$${variation.minPrice.toFixed(2)} - R$${variation.maxPrice.toFixed(2)}`;
+                variation.min_price === variation.max_price
+                  ? `R$${variation.min_price.toFixed(2)}`
+                  : `R$${variation.min_price.toFixed(2)} - R$${variation.max_price.toFixed(2)}`;
 
               return (
                 <View key={index} style={{ marginBottom: 16 }}>
                   <Divider style={{ marginVertical: 8 }} />
                   <View style={{ flexDirection: 'row', gap: 12 }}>
-                    {variation.imageUrl && (
+                    {variation.image_url && (
                       <Image
-                        source={{ uri: variation.imageUrl }}
+                        source={{ uri: variation.image_url }}
                         style={{ width: 90, height: 90, borderRadius: 8 }}
                         resizeMode="contain"
                       />
@@ -140,7 +140,7 @@ export default function TabOneScreen() {
           <Card.Content>
             {cart.map((item, index) => (
               <Text key={index} style={{ marginBottom: 6 }}>
-                • R${item.minPrice.toFixed(2)}
+                • R${item.min_price.toFixed(2)}
               </Text>
             ))}
           </Card.Content>
