@@ -93,7 +93,23 @@ class Clustering:
             axis=1
         )
 
-        return df
+        df_grouped = df.groupby(["brand", "cluster"]).agg({
+            "clusteredName": "first",
+            "name": list,
+            "storeId": list,
+            "weight": list,
+            "measure": list,
+            "price": list,
+            "oldPrice": list,
+            "link": list,
+            "cartLink": list,
+            "imageUrl": list
+        }).reset_index()
+
+        df_grouped["variations"] = df_grouped.apply(cls._group_variations, axis=1)
+        df_grouped.drop(columns=["name", "weight", "measure", "storeId", "price", "oldPrice", "link", "cartLink", "imageUrl"], inplace=True)
+
+        return df_grouped
 
     @classmethod
     def temp_process(cls) -> pd.DataFrame:
@@ -156,11 +172,12 @@ class Clustering:
     @classmethod
     def load(cls, df):
         # df = ti.xcom_pull(task_ids = "process_task")
+        Loader.load(df, layer="clustered", name="products")
 
         records = cls._postgres_load(df)
         products = cls._map_to_products(records)
 
-        Loader.load(pd.DataFrame(products), layer="clustered", name="products")
+        Loader.load(pd.DataFrame(products), layer="clustered", name="es-products")
 
         cls._elasticsearch_load(products)
 
@@ -192,50 +209,41 @@ class Clustering:
         cursor.execute("SELECT id, name FROM brands WHERE name = ANY(%s)", (list(unique_brands),))
         brand_map = {name: bid for bid, name in cursor.fetchall()}
 
-        grouped = df.groupby(["cluster", "brand", "weight", "measure"]).agg({
-            "clusteredName": "first"
-        }).reset_index()
+        product_entries = []
+        for _, row in df.iterrows():
+            for variation in row["variations"]:
+                product_entries.append((
+                    row["clusteredName"],
+                    brand_map[row["brand"]],
+                    variation["weight"],
+                    variation["measure"]
+                ))
 
-        grouped_clustered = grouped[["cluster", "brand", "weight", "measure", "clusteredName"]].rename(
-            columns={"clusteredName": "grouped_clusteredName"}
-        )
-        df = df.merge(
-            grouped_clustered,
-            on=["cluster", "brand", "weight", "measure"],
-            how="left"
-        )
-        df["clusteredName"] = df["grouped_clusteredName"]
-        df.drop(columns=["grouped_clusteredName"], inplace=True)
-
-        product_entries = [
-            (row["clusteredName"], brand_map[row["brand"]], row["weight"], row["measure"])
-            for _, row in grouped.iterrows()
-        ]
         cursor.executemany("""
             INSERT INTO products (clustered_name, id_brand, weight, measure)
             VALUES (%s, %s, %s, %s)
         """, product_entries)
 
-        clustered_params = [(row["clusteredName"], row["weight"], row["measure"]) for _, row in grouped.iterrows()]
         cursor.execute("""
             SELECT id, clustered_name, weight, measure 
-            FROM products 
-            WHERE (clustered_name, weight, measure) IN %s
-        """, (tuple(clustered_params),))
+            FROM products
+        """)
         product_map = {(name, weight, measure): pid for pid, name, weight, measure in cursor.fetchall()}
 
         store_product_rows = []
         for _, row in df.iterrows():
-            store_product_rows.append((
-                row["storeId"],
-                product_map[(row["clusteredName"], row["weight"], row["measure"])],
-                row["name"],
-                row["price"],
-                row["oldPrice"],
-                row["link"],
-                row["cartLink"],
-                row["imageUrl"]
-            ))
+            for variation in row["variations"]:
+                for store in variation["sellers"]:
+                    store_product_rows.append((
+                        store["storeId"],
+                        product_map[(row["clusteredName"], variation["weight"], variation["measure"])],
+                        variation["name"],
+                        store["price"],
+                        store["oldPrice"],
+                        store["link"],
+                        store["cartLink"],
+                        variation["imageUrl"]
+                    ))
 
         cursor.executemany("""
             INSERT INTO store_products (
@@ -339,12 +347,7 @@ class Clustering:
 
             processed_batch = []
             for text in batch:
-                words = get_words(text)
-                filtered_words = [
-                    word for word in words 
-                    if word.lower() not in cls.PORTUGUESE_STOPWORDS
-                ]
-                processed_text = " ".join(filtered_words)
+                processed_text = cls._remove_stopwords(text)
                 processed_batch.append(processed_text)
 
             inputs = tokenizer(
@@ -364,6 +367,15 @@ class Clustering:
         return np.vstack(embeddings)
 
     @classmethod
+    def _remove_stopwords(cls, text):
+        words = get_words(text)
+        filtered_words = [
+            word for word in words 
+            if word.lower() not in cls.PORTUGUESE_STOPWORDS
+        ]
+        return " ".join(filtered_words)
+
+    @classmethod
     def _split_name_brand(cls, name, brand):
         brand_regex = cls._generate_remove_brand_regex(brand)
         match = re.search(brand_regex, name, flags=re.IGNORECASE)
@@ -381,18 +393,44 @@ class Clustering:
         return part_before, brand_name, part_after
 
     @classmethod
-    def _evaluate_clusters(cls, features, labels):
-        print(f"Silhouette Score: {silhouette_score(features, labels):.3f}")
-        print(f"Davies-Bouldin Index: {davies_bouldin_score(features, labels):.3f}")
-        print(f"Calinski-Harabasz Index: {calinski_harabasz_score(features, labels):.3f}")
-
+    def _evaluate_clusters(cls, features, cluster_labels):
+        # Filter out noise points (-1 labels) for metrics that don't handle them
+        valid_mask = cluster_labels != -1
+        n_clusters = len(np.unique(cluster_labels[valid_mask]))
+        
+        print("\n=== HDBSCAN Clustering Evaluation ===")
+        print(f"Number of clusters: {n_clusters}")
+        print(f"Noise points: {np.sum(cluster_labels == -1)}")
+        
+        if n_clusters > 1:
+            # Metrics on non-noise points
+            print(f"\nMetrics on clean data ({np.sum(valid_mask)} points):")
+            print(f"Silhouette Score: {silhouette_score(features[valid_mask], cluster_labels[valid_mask]):.3f}")
+            print(f"Davies-Bouldin Index: {davies_bouldin_score(features[valid_mask], cluster_labels[valid_mask]):.3f}")
+            print(f"Calinski-Harabasz Index: {calinski_harabasz_score(features[valid_mask], cluster_labels[valid_mask]):.3f}")
+        
+        # Visualization with noise points
         tsne = TSNE(n_components=2, random_state=42)
         reduced = tsne.fit_transform(features)
         
         plt.figure(figsize=(12,8))
-        scatter = plt.scatter(reduced[:,0], reduced[:,1], c=labels, cmap='tab20', alpha=0.6)
-        plt.title('Visualização 2D dos Clusters (t-SNE)')
-        plt.colorbar(scatter)
+        # Plot noise points first
+        noise_mask = cluster_labels == -1
+        plt.scatter(reduced[noise_mask, 0], reduced[noise_mask, 1], 
+                    c='gray', alpha=0.3, label='Noise')
+        
+        # Plot clusters
+        unique_labels = np.unique(cluster_labels[valid_mask])
+        colors = plt.cm.tab20(np.linspace(0, 1, len(unique_labels)))
+        
+        for label, color in zip(unique_labels, colors):
+            mask = cluster_labels == label
+            plt.scatter(reduced[mask, 0], reduced[mask, 1], 
+                        c=[color], label=f'Cluster {label}', alpha=0.6)
+        
+        plt.title('HDBSCAN Cluster Visualization (t-SNE)')
+        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+        plt.tight_layout()
         plt.show()
 
     @classmethod
@@ -472,3 +510,38 @@ class Clustering:
         if len(vectors) == 0:
             return np.zeros(model.vector_size)
         return np.mean(vectors, axis=0)
+
+
+    @classmethod
+    def _group_variations(cls, row: pd.Series) -> dict:
+        variations = [
+            {
+                "name": n, "weight": w, "measure": m, "storeId": s, "price": p,
+                "oldPrice": op, "link": l, "cartLink": cl, "imageUrl": img
+            }
+            for n, w, m, s, p, op, l, cl, img in zip(
+                row["name"], row["weight"], row["measure"], row["storeId"],
+                row["price"], row["oldPrice"], row["link"], row["cartLink"], row["imageUrl"]
+            )
+        ]
+
+        df = pd.DataFrame(variations)
+
+        df_grouped = df.groupby(["weight", "measure", "name"], as_index=False).agg(
+            imageUrl=("imageUrl", "first"),  # Apenas uma imagem representativa por variação
+            sellers=("storeId", lambda x: [
+                {
+                    "storeId": store,
+                    "price": price,
+                    "oldPrice": old_price,
+                    "link": link,
+                    "cartLink": cart_link
+                }
+                for store, price, old_price, link, cart_link in zip(
+                    x, df.loc[x.index, "price"], df.loc[x.index, "oldPrice"],
+                    df.loc[x.index, "link"], df.loc[x.index, "cartLink"]
+                )
+            ])
+        )
+
+        return df_grouped.to_dict(orient="records")
