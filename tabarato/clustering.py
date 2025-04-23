@@ -40,7 +40,6 @@ class Clustering:
             axis=1, 
             result_type="expand"
         )
-        df["full_text"] = df["part_before"] + " " + df["part_after"]
 
         tokenizer = AutoTokenizer.from_pretrained("neuralmind/bert-base-portuguese-cased")
         model = AutoModel.from_pretrained("neuralmind/bert-base-portuguese-cased")
@@ -48,7 +47,7 @@ class Clustering:
         model.to(device)
         model.eval()
 
-        sentence_vectors = cls._get_bert_embeddings(df["full_text"].tolist(), model, device, tokenizer)
+        sentence_vectors = cls._get_bert_embeddings(df["part_before"].tolist(), model, device, tokenizer)
         
         name_scaler = StandardScaler()
         name_scaled = name_scaler.fit_transform(sentence_vectors)
@@ -60,34 +59,12 @@ class Clustering:
         
         distance_matrix = pdist(features, metric="cosine")
         linkage_matrix = linkage(distance_matrix, method="ward")
-        cluster_labels = fcluster(linkage_matrix, t=0.7, criterion="distance")
+        df["cluster"] = fcluster(linkage_matrix, t=0.7, criterion="distance").astype(str)
 
-        df["cluster"] = cluster_labels.astype(str)
+        cls._evaluate_clusters(features, df["cluster"].astype(int).values)
+        
+        cls._subcluster_by_part_after(df, model, device, tokenizer)
 
-        # df["final_cluster"] = df["cluster"].copy()
-
-        # max_cluster_length = 10
-        # for cluster_id in df["cluster"].unique():
-        #     cluster_mask = df["cluster"] == cluster_id
-        #     cluster_data = df[cluster_mask]
-        #     if len(cluster_data) > max_cluster_length:
-        #         sub_embeddings = cls._get_bert_embeddings(
-        #             cluster_data["part_after"].fillna("") + " " + cluster_data["part_before"].fillna(""), 
-        #             model, 
-        #             device, 
-        #             tokenizer
-        #         )
-        #         if sub_embeddings is not None:
-        #             sub_distance = pdist(sub_embeddings, metric="cosine")
-        #             sub_linkage = linkage(sub_distance, method="ward")
-        #             sub_clusters = fcluster(sub_linkage, t=0.7, criterion="distance")
-        #             df.loc[cluster_mask, "final_cluster"] = [f"{cluster_id}_{sub}" for sub in sub_clusters.astype(str)]
-
-        # df["cluster"] = df["final_cluster"].astype(str)
-
-        cls._evaluate_clusters(features, cluster_labels)
-
-        # TODO: resolver casos como da 3 corações em que clusteredNames estão repetidos
         df["clusteredName"] = df.apply(
             lambda row: cls._build_clustered_name(row["part_before"], row["part_after"], row["brand_name"]), 
             axis=1
@@ -110,6 +87,31 @@ class Clustering:
         df_grouped.drop(columns=["name", "weight", "measure", "storeId", "price", "oldPrice", "link", "cartLink", "imageUrl"], inplace=True)
 
         return df_grouped
+
+    @classmethod
+    def _subcluster_by_part_after(cls, df: pd.DataFrame, model, device, tokenizer):
+        for cid in df["cluster"].unique():
+            mask = df["cluster"] == cid
+            group = df[mask]
+            
+            if len(group) <= 1:
+                continue
+
+            sub_embeddings = cls._get_bert_embeddings(
+                group["part_after"].fillna(""), 
+                model, 
+                device, 
+                tokenizer
+            )
+            
+            if sub_embeddings is not None:
+                sub_distance = pdist(sub_embeddings, metric="cosine")
+                sub_linkage = linkage(sub_distance, method="average")
+                sub_clusters = fcluster(sub_linkage, t=0.3, criterion="distance")
+
+                unique_sub_clusters = np.unique(sub_clusters)
+                if len(unique_sub_clusters) > 1:
+                    df.loc[mask, "cluster"] = [f"{cid}_{sub}" for sub in sub_clusters.astype(str)]
 
     @classmethod
     def temp_process(cls) -> pd.DataFrame:
