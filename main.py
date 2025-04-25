@@ -3,6 +3,8 @@ from tabarato.extract.bistek import BistekExtractor
 from tabarato.transform.bistek import BistekTransformer
 from tabarato.extract.angeloni import AngeloniExtractor
 from tabarato.transform.angeloni import AngeloniTransformer
+from tabarato.extract.giassi import GiassiExtractor
+from tabarato.transform.giassi import GiassiTransformer
 from tabarato.clustering import Clustering
 
 
@@ -26,13 +28,17 @@ if __name__ == "__main__":
     print(str(step), "|", store)
 
     if step == 1 or step == 0:
-        if store == "angeloni" or not store == "":
+        if store == "angeloni" or store == "":
             df = AngeloniExtractor.extract()
             AngeloniExtractor.load(df)
 
         if store == "bistek" or store == "":
             df = BistekExtractor.extract()
             BistekExtractor.load(df)
+
+        if store == "giassi" or store == "":
+            df = GiassiExtractor.extract()
+            GiassiExtractor.load(df)
     
     if step == 2 or step == 0:
         if store == "angeloni" or store == "":
@@ -42,6 +48,10 @@ if __name__ == "__main__":
         if store == "bistek" or store == "":
             df = BistekTransformer.transform()
             BistekTransformer.load(df)
+ 
+        if store == "giassi" or store == "":
+            df = GiassiTransformer.transform()
+            GiassiTransformer.load(df)
 
     if step == 3 or step == 0:
         df = Clustering.process()

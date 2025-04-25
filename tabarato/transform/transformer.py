@@ -79,12 +79,13 @@ class Transformer(ABC):
     @abstractmethod
     def transform(cls, df: pd.DataFrame) -> pd.DataFrame:
         df[["measure", "weight"]] = df.apply(cls._transform_measurement, axis=1)
-        df["name"] = df.apply(cls._transform_name, axis=1)
         df["brand"] = df.apply(cls._transform_brand, axis=1)
+        df["name"] = df.apply(cls._transform_name, axis=1)
         df[["name", "details"]] = df.apply(cls._transform_details, axis=1)
+        df[["name_without_brand", "name"]] = df.apply(lambda row: cls._normalize_name_and_brand(row["name"], row["brand"]), axis=1, result_type="expand")
 
         return df.filter(items=[
-            "name", "brand", "refId",
+            "name", "name_without_brand", "brand", "refId",
             "measure", "weight", "link", "cart_link",
             "price", "old_price", "description", "details",
             "image_url"
@@ -129,6 +130,11 @@ class Transformer(ABC):
 
         for pattern, replacement in replace_patterns.items():
             name = re.sub(pattern, replacement, name, flags=re.IGNORECASE)
+
+        words = name.split()
+        seen = set()
+        deduped_words = [word for word in words if not (word in seen or seen.add(word))]
+        name = " ".join(deduped_words)
 
         name = re.sub(r"(?<!\d)\.(?!\d)", ". ", name)
         name = strip_all(name)
@@ -228,3 +234,35 @@ class Transformer(ABC):
             measure = "ml"
 
         return pd.Series([measure, int(weight)])
+
+    @classmethod
+    def _normalize_name_and_brand(cls, name, brand):
+        brand_regex = cls._generate_remove_brand_regex(brand)
+        match = re.search(brand_regex, name, flags=re.IGNORECASE)
+        if match:
+            part_before = name[:match.start()].strip()
+            brand_name = name[match.start():match.end()].strip().replace("-", " ")
+            part_after = name[match.end():].strip()
+        else:
+            part_before = name.strip()
+            brand_name = ""
+            part_after = ""
+
+        part_before = re.sub(r'\s+', ' ', part_before)
+        part_after = re.sub(r'\s+', ' ', part_after)
+
+        name = (part_before + " " + part_after).strip()
+        return name, (name + " " + brand_name).strip()
+
+    @classmethod
+    def _generate_remove_brand_regex(cls, brand):
+        words = brand.split("-")
+
+        if words[-1].endswith("s"):
+            last_word = words[-1][:-1]
+            words[-1] = last_word
+            s_sufix = r"(\W*s)?"
+        else:
+            s_sufix = ""
+
+        return r"\b" + r"\W*".join([re.escape(p) for p in words]) + s_sufix + r"\b"
