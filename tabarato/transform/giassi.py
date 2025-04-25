@@ -25,7 +25,9 @@ class GiassiTransformer(Transformer):
         
         df[["image_url", "cart_link", "price", "old_price"]] = df.apply(cls._extract_item_info, axis=1)
         
-        return super().transform(df)
+        df = super().transform(df)
+        df["category"] = ""
+        return df
 
     @classmethod
     def _extract_item_info(cls, row):

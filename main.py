@@ -6,6 +6,8 @@ from tabarato.transform.angeloni import AngeloniTransformer
 from tabarato.extract.giassi import GiassiExtractor
 from tabarato.transform.giassi import GiassiTransformer
 from tabarato.clustering import Clustering
+from tabarato.postgres_loader import PostgresLoader
+from tabarato.elasticsearch_loader import ElasticsearchLoader
 
 
 if __name__ == "__main__":
@@ -56,3 +58,11 @@ if __name__ == "__main__":
     if step == 3 or step == 0:
         df = Clustering.process()
         Clustering.load(df)
+
+    if step == 4 or step == 0:
+        df = PostgresLoader.process()
+        PostgresLoader.load(df)
+
+    if step == 5 or step == 0:
+        df = ElasticsearchLoader.process()
+        ElasticsearchLoader.load(df)
