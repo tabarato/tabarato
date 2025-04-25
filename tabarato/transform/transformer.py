@@ -56,6 +56,10 @@ class Transformer(ABC):
         "litro",
         "lt",
         "l",
+        "caixa",
+        "pack",
+        "embalagem economica",
+        "kit"
     ]
     UNIT = [
         "unidades",
@@ -82,10 +86,10 @@ class Transformer(ABC):
         df["brand"] = df.apply(cls._transform_brand, axis=1)
         df["name"] = df.apply(cls._transform_name, axis=1)
         df[["name", "details"]] = df.apply(cls._transform_details, axis=1)
-        df[["name_without_brand", "name"]] = df.apply(lambda row: cls._normalize_name_and_brand(row["name"], row["brand"]), axis=1, result_type="expand")
+        df[["name", "name_without_brand", "brand_name", "category"]] = df.apply(lambda row: cls._normalize_name_and_brand(row["name"], row["brand"]), axis=1, result_type="expand")
 
         return df.filter(items=[
-            "name", "name_without_brand", "brand", "refId",
+            "name", "name_without_brand", "brand_name", "category", "brand", "refId",
             "measure", "weight", "link", "cart_link",
             "price", "old_price", "description", "details",
             "image_url"
@@ -108,33 +112,28 @@ class Transformer(ABC):
         name = row["name"].lower()
 
         ignore_patterns = [
-            r"(?:leve\s(?:\w+|\+)\s)?pague\s(?:\w+|\-)",
-            r"l\+p\-",
-            r"\b\d+(?:[.,]\d+)?\s*(?:" + "|".join(cls.MEASUREMENT) + r")\b\.?\b",
-            r"\b(tradicional|trad\.|trad)\b",
-            r"\d+%\w+\.?",
-            r"(?:c/|com)\s*(\d+(?:/\d+)?)(?:\s*(?:" + "|".join(cls.UNIT) + r"))?",
-            r"(\d+(?:/\d+)?)(?:\s*(?:" + "|".join(cls.UNIT) + r"))(?!\s*\w)",
-            "|".join(cls.UNIT)
+            r"(?:leve\s(?:\w+|\+)\s)?pague\s(?:\w+|\-)", # leve + pague -
+            r"l\+p\-", # l+p-
+            r"\b\d+(?:[.,]\d+)?\s*(?:" + "|".join(cls.MEASUREMENT) + r")\b\.?\b", # peso
+            r"\b(tradicional|trad\.|trad)\b", # tradicional
+            r"\d+%\w+\.?", # percentual
+            r"(?:c/|com)\s*(\d+(?:/\d+)?)(?:\s*(?:" + "|".join(cls.UNIT) + r"))?", # com X unidades
+            r"(\d+(?:/\d+)?)(?:\s*(?:" + "|".join(cls.UNIT) + r"))(?!\s*\w)", # X unidades
+            "|".join(cls.UNIT) # Unidades
         ]
 
         for pattern in ignore_patterns:
             name = re.sub(pattern, "", name, flags=re.IGNORECASE)
 
         replace_patterns = {
-            r"\bp/(?!\s?\d)": "para ",
-            r"\bs/(?!\s?\d)": "sem ",
-            r"\bc/(?!\s?\d)": "com ",
-            r"\b\s?/\s?(?!\s?\d)": " e "
+            r"\bp/(?!\s?\d)": "para ", # p/ -> para
+            r"\bs/(?!\s?\d)": "sem ", # s/ -> sem
+            r"\bc/(?!\s?\d)": "com ", # c/ -> com
+            r"\b\s?/\s?(?!\s?\d)": " e " # X/Y -> X e Y
         }
 
         for pattern, replacement in replace_patterns.items():
             name = re.sub(pattern, replacement, name, flags=re.IGNORECASE)
-
-        words = name.split()
-        seen = set()
-        deduped_words = [word for word in words if not (word in seen or seen.add(word))]
-        name = " ".join(deduped_words)
 
         name = re.sub(r"(?<!\d)\.(?!\d)", ". ", name)
         name = strip_all(name)
@@ -237,22 +236,43 @@ class Transformer(ABC):
 
     @classmethod
     def _normalize_name_and_brand(cls, name, brand):
+        def remove_duplicate_words(text):
+            words = text.split()
+            seen = set()
+            result = []
+            for word in reversed(words):
+                word_lower = word.lower()
+                if word_lower not in seen:
+                    seen.add(word_lower)
+                    result.insert(0, word)
+            return " ".join(result)
+
         brand_regex = cls._generate_remove_brand_regex(brand)
         match = re.search(brand_regex, name, flags=re.IGNORECASE)
         if match:
             part_before = name[:match.start()].strip()
             brand_name = name[match.start():match.end()].strip().replace("-", " ")
             part_after = name[match.end():].strip()
+            category = part_before.lower()
         else:
             part_before = name.strip()
             brand_name = ""
             part_after = ""
+            category = ""
 
         part_before = re.sub(r'\s+', ' ', part_before)
         part_after = re.sub(r'\s+', ' ', part_after)
 
-        name = (part_before + " " + part_after).strip()
-        return name, (name + " " + brand_name).strip()
+        full_name = f"{part_before} {brand_name} {part_after}".strip()
+        name = remove_duplicate_words(full_name)
+
+        name_words = name.split()
+        brand_words = set(brand_name.lower().split())
+        name_without_brand = " ".join([
+            word for word in name_words if word.lower() not in brand_words
+        ])
+
+        return name, name_without_brand, brand_name, category
 
     @classmethod
     def _generate_remove_brand_regex(cls, brand):
