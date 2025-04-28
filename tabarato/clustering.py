@@ -68,7 +68,7 @@ class Clustering:
         Loader.load(df, layer="gold", name="products")
 
     @classmethod
-    def _get_features(cls, df, model, min_ngram_freq=5, alpha=0.8):
+    def _get_features(cls, df, model, min_ngram_freq=5):
         docs = [get_words(name.lower()) for name in df["name_without_brand"].tolist()]
         docs_phrased = [model.phraser[doc] for doc in docs]
 
@@ -97,11 +97,11 @@ class Clustering:
         embeddings = np.vstack(embeddings)
         binaries = np.vstack(binaries)
 
-        name_features = StandardScaler().fit(embeddings).transform(embeddings) * 0.8
+        name_features = StandardScaler().fit(embeddings).transform(embeddings)
         # binary_features = StandardScaler().fit(binaries).transform(binaries) * 0.2
-        brand_encoded = OneHotEncoder(sparse_output=False).fit_transform(df[["brand"]]) * 0.2
+        # brand_encoded = OneHotEncoder(sparse_output=False).fit_transform(df[["brand"]]) * 0.2
 
-        return np.hstack([name_features, brand_encoded])
+        return name_features
 
     @classmethod
     def _evaluate_clusters(cls, features, cluster_labels):
