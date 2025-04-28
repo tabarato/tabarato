@@ -42,14 +42,14 @@ class Model:
             vector_size=300,
             alpha=1e-3,
             window=10,
-            min_count=2,  # IGNORES WORD WITH FREQUENCY BELLOW
+            min_count=3,  # IGNORES WORD WITH FREQUENCY BELLOW
             workers=cpu_count() * 2,
             sg=1,  # 0 CBOW, 1 SKIP_GRAM
             cbow_mean=0,  # 0 SUM, 1 MEAN
             hs=0,  # 1 HIERARQUICAL SOFTMAX, 0 NEGATIVE
-            negative=7,
-            sample=1e-4,
-            epochs=25,
+            negative=10,
+            sample=1e-5,
+            epochs=30,
         )
         w2v.phraser = phraser
 
@@ -58,6 +58,17 @@ class Model:
         fname = get_tmpfile("w2v.vectors.kv")
         word_vectors.save(fname)
         print(f"Treinamento Word2Vec demorou: {round(time.time() - start, 2)}")
+
+        # DEVE SER SIMILAR
+        print(w2v.wv.n_similarity('Amaciante Conc Comfort Lavanda'.lower().split(), 'Amaciante Concentrado Comfort Lavanda'.lower().split()))
+        print(w2v.wv.n_similarity('Amaciante De Roupa Ype Blue Concentrado'.lower().split(), 'Amaciante Conc. Ype Blue'.lower().split()))
+        print(w2v.wv.n_similarity('Refrigerante Pepsi Black'.lower().split(), 'Refrigerante Pepsi Cola Black Zero Acucar'.lower().split()))
+        print(w2v.wv.n_similarity('Refrigerante Coca Cola + Fanta Guarana'.lower().split(), 'Kit Refrigerante Coca Cola Original + Guarana Fanta'.lower().split()))
+
+        # DEVE SER DISTANTE
+        print(w2v.wv.n_similarity('Refrigerante Pepsi Cola'.lower().split(), 'Refrigerante Pepsi Cola Black Zero Acucar'.lower().split()))
+        print(w2v.wv.n_similarity('Amaciante Conc Comfort Fiber'.lower().split(), 'Amaciante Conc Comfort Lavanda'.lower().split()))
+        print(w2v.wv.n_similarity('Sabonete Líquido Antibacteriano para as Mãos Protex Nutri Protect Vitamina E'.lower().split(), 'Sabonete Líquido Antibacteriano para as Mãos Protex Duo Protect'.lower().split()))
         print()
 
     @classmethod
@@ -69,22 +80,21 @@ class Model:
         
         bigram = Phrases(
             tokenized_titles,
-            min_count=3,
-            threshold=0.25,
+            min_count=2,
+            threshold=0.2,
             scoring='npmi'
         )
         trigram = Phrases(
             bigram[tokenized_titles],
-            min_count=3,
-            threshold=0.15,
+            min_count=2,
+            threshold=0.1,
             scoring='npmi'
         )
         
         phraser = Phraser(trigram)
         phrased_titles = []
         for title in phraser[tokenized_titles]:
-            clean_title = [word for word in title if word not in cls.PORTUGUESE_STOPWORDS]
-            phrased_titles.append(clean_title)
+            phrased_titles.append(title)
         
         main_product_terms = set(phraser.phrasegrams.keys())
         Loader.load(pd.DataFrame(main_product_terms), layer="model", name="products_ngrams")
