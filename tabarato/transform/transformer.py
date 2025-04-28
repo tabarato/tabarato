@@ -6,6 +6,7 @@ import re
 import pandas as pd
 from abc import ABC, abstractmethod
 from unidecode import unidecode
+from rapidfuzz import process, fuzz
 
 
 class Transformer(ABC):
@@ -55,11 +56,15 @@ class Transformer(ABC):
         "kg",
         "litro",
         "lt",
-        "l",
         "caixa",
         "pack",
         "embalagem economica",
-        "kit"
+        "kit",
+        "gfa",
+        "gf",
+        "bj",
+        "bandeja",
+        "sache"
     ]
     UNIT = [
         "unidades",
@@ -85,11 +90,10 @@ class Transformer(ABC):
         df[["measure", "weight"]] = df.apply(cls._transform_measurement, axis=1)
         df["brand"] = df.apply(cls._transform_brand, axis=1)
         df["name"] = df.apply(cls._transform_name, axis=1)
-        df[["name", "details"]] = df.apply(cls._transform_details, axis=1)
-        df[["name", "name_without_brand", "brand_name", "category"]] = df.apply(lambda row: cls._normalize_name_and_brand(row["name"], row["brand"]), axis=1, result_type="expand")
+        df[["name", "name_without_brand", "brand_name"]] = df.apply(lambda row: cls._normalize_name_and_brand(row["name"], row["brand"]), axis=1, result_type="expand")
 
         return df.filter(items=[
-            "name", "name_without_brand", "brand_name", "category", "brand", "refId",
+            "name", "name_without_brand", "brand_name", "brand", "refId",
             "measure", "weight", "link", "cart_link",
             "price", "old_price", "description", "details",
             "image_url"
@@ -112,14 +116,15 @@ class Transformer(ABC):
         name = row["name"].lower()
 
         ignore_patterns = [
-            r"(?:leve\s(?:\w+|\+)\s)?pague\s(?:\w+|\-)", # leve + pague -
+            r"(?:leve\s(?:\w+|\+|mais)\s(?:e\s)?)?pague\s(?:\w+|\-|menos)", # leve + pague -
             r"l\+p\-", # l+p-
             r"\b\d+(?:[.,]\d+)?\s*(?:" + "|".join(cls.MEASUREMENT) + r")\b\.?\b", # peso
             r"\b(tradicional|trad\.|trad)\b", # tradicional
             r"\d+%\w+\.?", # percentual
             r"(?:c/|com)\s*(\d+(?:/\d+)?)(?:\s*(?:" + "|".join(cls.UNIT) + r"))?", # com X unidades
             r"(\d+(?:/\d+)?)(?:\s*(?:" + "|".join(cls.UNIT) + r"))(?!\s*\w)", # X unidades
-            "|".join(cls.UNIT) # Unidades
+            r"(?:" + "|".join(cls.UNIT) + r")(?!\s*\w)", # Unidades
+            r"(?<!^)\b(\d+(?:[.,]\d+)?)?\s*(?:" + "|".join(cls.DETAILS) + r")\b\.?\b"
         ]
 
         for pattern in ignore_patterns:
@@ -135,6 +140,7 @@ class Transformer(ABC):
         for pattern, replacement in replace_patterns.items():
             name = re.sub(pattern, replacement, name, flags=re.IGNORECASE)
 
+        name = name.replace("-", " ")
         name = re.sub(r"(?<!\d)\.(?!\d)", ". ", name)
         name = strip_all(name)
         name = unidecode(name)
@@ -151,25 +157,6 @@ class Transformer(ABC):
         brand = brand.replace(" ", "-")
 
         return brand.lower()
-
-    @classmethod
-    def _transform_details(cls, row: pd.Series) -> pd.Series:
-        name = row["name"]
-
-        details = []
-
-        details_pattern = r"(?<!^)\b(\d+(?:[.,]\d+)?)?\s*(" + "|".join(cls.DETAILS) + r")\b\.?\b"
-        matches = re.findall(details_pattern, name, re.IGNORECASE)
-
-        if matches:
-            for match in matches:
-                detail = strip_all(" ".join(match))
-                name = name.replace(detail, "")
-                details.append(detail)
-
-        name = strip_all(name)
-
-        return pd.Series([name, details])
 
     @classmethod
     def _transform_measurement(cls, row: pd.Series) -> pd.Series:
@@ -247,18 +234,79 @@ class Transformer(ABC):
                     result.insert(0, word)
             return " ".join(result)
 
-        brand_regex = cls._generate_remove_brand_regex(brand)
-        match = re.search(brand_regex, name, flags=re.IGNORECASE)
-        if match:
-            part_before = name[:match.start()].strip()
-            brand_name = name[match.start():match.end()].strip().replace("-", " ")
-            part_after = name[match.end():].strip()
-            category = part_before.lower()
-        else:
-            part_before = name.strip()
-            brand_name = ""
-            part_after = ""
-            category = ""
+        def clean_word(word):
+            return re.sub(r'\W+', '', word).lower()
+
+        def match_brand_name_in_name(name, brand):
+            name_words = name.split()
+            brand_words = brand.split("-")
+
+            i = 0
+            n = len(name_words)
+            matched_indices = []
+
+            while i < n:
+                name_word_clean = clean_word(name_words[i])
+                brand_first_word_clean = clean_word(brand_words[0])
+
+                if brand_first_word_clean.startswith(name_word_clean):
+                    matched_indices.append(i)
+                    break
+                i += 1
+
+            if matched_indices:
+                i += 1
+                brand_idx = 1
+
+                while i < n and brand_idx < len(brand_words):
+                    name_word_clean = clean_word(name_words[i])
+                    brand_word_clean = clean_word(brand_words[brand_idx])
+
+                    if brand_word_clean.startswith(name_word_clean):
+                        brand_idx += 1
+
+                    matched_indices.append(i)
+                    i += 1
+
+                if brand_idx == len(brand_words):
+                    start = matched_indices[0]
+                    end = matched_indices[-1]
+                    return " ".join(name_words[start:end+1])
+
+            return ""
+
+        def fuzzy_substring_match(name: str, brand: str, threshold: int):
+            name = name.lower()
+            brand = brand.lower()
+            length = len(brand)
+
+            best_substr = None
+            best_score = 0
+
+            for window in range(max(1, length - 2), length + 3):
+                for i in range(len(name) - window + 1):
+                    substr = name[i : i + window]
+                    score = fuzz.ratio(substr, brand)
+                    if score > best_score:
+                        best_score = score
+                        best_substr = substr
+
+            if best_score >= threshold:
+                return best_substr.title()
+            return ""
+
+        brand_name = match_brand_name_in_name(name, brand)
+        if not brand_name:
+            brand_name = fuzzy_substring_match(name, brand, threshold=80)
+
+        part_before = name.strip()
+        part_after = ""
+        if brand_name:
+            pattern = re.escape(brand_name).replace(r'\ ', r'\s+')
+            match = re.search(pattern, name, flags=re.IGNORECASE)
+            if match:
+                part_before = name[:match.start()].strip()
+                part_after = name[match.end():].strip()
 
         part_before = re.sub(r'\s+', ' ', part_before)
         part_after = re.sub(r'\s+', ' ', part_after)
@@ -267,22 +315,9 @@ class Transformer(ABC):
         name = remove_duplicate_words(full_name)
 
         name_words = name.split()
-        brand_words = set(brand_name.lower().split())
+        brand_words_set = set(clean_word(word) for word in brand_name.split())
         name_without_brand = " ".join([
-            word for word in name_words if word.lower() not in brand_words
+            word for word in name_words if clean_word(word) not in brand_words_set
         ])
 
-        return name, name_without_brand, brand_name, category
-
-    @classmethod
-    def _generate_remove_brand_regex(cls, brand):
-        words = brand.split("-")
-
-        if words[-1].endswith("s"):
-            last_word = words[-1][:-1]
-            words[-1] = last_word
-            s_sufix = r"(\W*s)?"
-        else:
-            s_sufix = ""
-
-        return r"\b" + r"\W*".join([re.escape(p) for p in words]) + s_sufix + r"\b"
+        return name, name_without_brand, brand_name
