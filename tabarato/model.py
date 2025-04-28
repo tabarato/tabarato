@@ -22,7 +22,7 @@ class Model:
     def train_model(cls) -> str:
         df = Loader.read("silver")
 
-        titles = df["name_without_brand"].dropna().unique().tolist()
+        titles = df["name"].dropna().unique().tolist()
 
         cls._train_model(titles)
 
@@ -39,9 +39,9 @@ class Model:
 
         w2v = Word2Vec(
             sentences=processed_titles,
-            vector_size=300,
+            vector_size=150,
             alpha=1e-3,
-            window=10,
+            window=5,
             min_count=3,  # IGNORES WORD WITH FREQUENCY BELLOW
             workers=cpu_count() * 2,
             sg=1,  # 0 CBOW, 1 SKIP_GRAM
@@ -49,7 +49,7 @@ class Model:
             hs=0,  # 1 HIERARQUICAL SOFTMAX, 0 NEGATIVE
             negative=10,
             sample=1e-5,
-            epochs=30,
+            epochs=50,
         )
         w2v.phraser = phraser
 
@@ -59,16 +59,20 @@ class Model:
         word_vectors.save(fname)
         print(f"Treinamento Word2Vec demorou: {round(time.time() - start, 2)}")
 
+        def similarity(a, b):
+            tokens1 = [word for word in get_words(a.lower()) if word not in cls.PORTUGUESE_STOPWORDS]
+            tokens2 = [word for word in get_words(b.lower()) if word not in cls.PORTUGUESE_STOPWORDS]
+            return w2v.wv.n_similarity(w2v.phraser[tokens1], w2v.phraser[tokens2])
+
         # DEVE SER SIMILAR
-        print(w2v.wv.n_similarity('Amaciante Conc Comfort Lavanda'.lower().split(), 'Amaciante Concentrado Comfort Lavanda'.lower().split()))
-        print(w2v.wv.n_similarity('Amaciante De Roupa Ype Blue Concentrado'.lower().split(), 'Amaciante Conc. Ype Blue'.lower().split()))
-        print(w2v.wv.n_similarity('Refrigerante Pepsi Black'.lower().split(), 'Refrigerante Pepsi Cola Black Zero Acucar'.lower().split()))
-        print(w2v.wv.n_similarity('Refrigerante Coca Cola + Fanta Guarana'.lower().split(), 'Kit Refrigerante Coca Cola Original + Guarana Fanta'.lower().split()))
+        print(similarity('Amaciante De Roupa Ype Blue Concentrado', 'Amaciante Concentrado Ype Blue'))
+        print(similarity('Refrigerante Pepsi Black', 'Refrigerante Pepsi Cola Black Zero Acucar'))
+        print(similarity('Refrigerante Coca Cola + Fanta Guarana', 'Kit Refrigerante Coca Cola Original + Guarana Fanta'))
 
         # DEVE SER DISTANTE
-        print(w2v.wv.n_similarity('Refrigerante Pepsi Cola'.lower().split(), 'Refrigerante Pepsi Cola Black Zero Acucar'.lower().split()))
-        print(w2v.wv.n_similarity('Amaciante Conc Comfort Fiber'.lower().split(), 'Amaciante Conc Comfort Lavanda'.lower().split()))
-        print(w2v.wv.n_similarity('Sabonete Líquido Antibacteriano para as Mãos Protex Nutri Protect Vitamina E'.lower().split(), 'Sabonete Líquido Antibacteriano para as Mãos Protex Duo Protect'.lower().split()))
+        print(similarity('Refrigerante Pepsi Cola', 'Refrigerante Pepsi Cola Black Zero Acucar'))
+        print(similarity('Amaciante Concentrado Comfort Frescor Intenso', 'Amaciante Concentrado Comfort Lavanda'))
+        print(similarity('Sabonete Líquido Antibacteriano para as Mãos Protex Nutri Protect Vitamina E', 'Sabonete Líquido Antibacteriano para as Mãos Protex Duo Protect'))
         print()
 
     @classmethod
@@ -81,13 +85,13 @@ class Model:
         bigram = Phrases(
             tokenized_titles,
             min_count=2,
-            threshold=0.2,
+            threshold=0.3,
             scoring='npmi'
         )
         trigram = Phrases(
             bigram[tokenized_titles],
             min_count=2,
-            threshold=0.1,
+            threshold=0.2,
             scoring='npmi'
         )
         

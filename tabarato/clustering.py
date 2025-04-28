@@ -37,7 +37,7 @@ class Clustering:
 
         print("Clustering...")
         db = DBSCAN(
-            eps=0.2,
+            eps=0.15,
             min_samples=1,
             metric="cosine"
         ).fit(features)

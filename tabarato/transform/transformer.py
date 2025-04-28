@@ -6,7 +6,8 @@ import re
 import pandas as pd
 from abc import ABC, abstractmethod
 from unidecode import unidecode
-from rapidfuzz import process, fuzz
+from rapidfuzz import fuzz
+import json
 
 
 class Transformer(ABC):
@@ -53,6 +54,7 @@ class Transformer(ABC):
         "tubo",
         "ampola",
         "pote",
+        "pt",
         "kg",
         "litro",
         "lt",
@@ -70,7 +72,12 @@ class Transformer(ABC):
         "super economico",
         "economico",
         "economica",
-        "ec"
+        "ec",
+        "squeeze",
+        "sq",
+        r"ed\. limitada",
+        r"ed\. lim",
+        r"ed\. l",
     ]
     UNIT = [
         "unidades",
@@ -101,9 +108,13 @@ class Transformer(ABC):
     @classmethod
     @abstractmethod
     def transform(cls, df: pd.DataFrame) -> pd.DataFrame:
+        abbreviations = {}
+        with open("data/abbr.json", "r") as file:
+            abbreviations = json.load(file)
+
         df[["measure", "weight"]] = df.apply(cls._transform_measurement, axis=1)
         df["brand"] = df.apply(cls._transform_brand, axis=1)
-        df["name"] = df.apply(cls._transform_name, axis=1)
+        df["name"] = df.apply(lambda row: cls._transform_name(row, abbreviations), axis=1)
         df[["name", "name_without_brand", "brand_name"]] = df.apply(lambda row: cls._normalize_name_and_brand(row["name"], row["brand"]), axis=1, result_type="expand")
 
         return df.filter(items=[
@@ -126,14 +137,13 @@ class Transformer(ABC):
         Loader.load(df, layer="silver", name=cls.slug())
     
     @classmethod
-    def _transform_name(cls, row: pd.Series) -> str:
+    def _transform_name(cls, row: pd.Series, abbreviations) -> str:
         name = row["name"].lower()
         name = unidecode(name)
 
         ignore_patterns = [
             r"\b\d+(?:[.,]\d+)?\s*(?:" + "|".join(cls.MEASUREMENT) + r")\b\.?\b", # peso
-            r"(?:leve(?:\s(?:\w+|\+|mais))?\s*(?:e\s)?)?pague(?:\s(?:\w+|\-|menos))?", # leve + pague -
-            r"l\+p\-", # l+p-
+            r"(?:\b(?:leve|l)(?:\s*(?:\+|mais|\d))\s*(?:e\s)?)(?:pague|p)(?:\s*(?:\-|menos|\d))?", # leve + pague -
             r"\b(tradicional|trad\.|trad)\b", # tradicional
             r"\d+%\w+\.?", # percentual
             r"(?<!^)\b(\d+(?:[.,]\d+)?)?\s*(?:" + "|".join(cls.DETAILS) + r")\b\.?\b",
@@ -161,6 +171,18 @@ class Transformer(ABC):
 
         for pattern, replacement in replace_patterns.items():
             name = re.sub(pattern, replacement, name, flags=re.IGNORECASE)
+
+        for abbr, replacement in abbreviations.items():
+            clean_abbr = abbr.rstrip('.').lower()
+            pattern = re.compile(
+                r'(?<!\S)' +
+                re.escape(clean_abbr) + 
+                r'\.?' +
+                r'(?!\S)',
+                flags=re.IGNORECASE
+            )
+            pattern = re.compile(r'\b' + re.escape(abbr.lower()), flags=re.IGNORECASE)
+            name = pattern.sub(replacement + " ", name)
 
         name = name.replace("-", " ")
         name = re.sub(r"(?<!\d)\.(?!\d)", ". ", name)
