@@ -58,13 +58,19 @@ class Transformer(ABC):
         "lt",
         "caixa",
         "pack",
-        "embalagem economica",
+        "embalagem",
         "kit",
         "gfa",
         "gf",
         "bj",
         "bandeja",
-        "sache"
+        "sache",
+        "refil",
+        "rf",
+        "super economico",
+        "economico",
+        "economica",
+        "ec"
     ]
     UNIT = [
         "unidades",
@@ -72,6 +78,14 @@ class Transformer(ABC):
         "unidadaes",
         r"un\.",
         "un"
+    ]
+    REMOVE_END = [
+        "c/ cada",
+        "com cada",
+        "cada",
+        "gratis",
+        "% de desconto",
+        "% desconto",
     ]
 
     @classmethod
@@ -114,27 +128,35 @@ class Transformer(ABC):
     @classmethod
     def _transform_name(cls, row: pd.Series) -> str:
         name = row["name"].lower()
+        name = unidecode(name)
 
         ignore_patterns = [
-            r"(?:leve\s(?:\w+|\+|mais)\s(?:e\s)?)?pague\s(?:\w+|\-|menos)", # leve + pague -
-            r"l\+p\-", # l+p-
             r"\b\d+(?:[.,]\d+)?\s*(?:" + "|".join(cls.MEASUREMENT) + r")\b\.?\b", # peso
+            r"(?:leve(?:\s(?:\w+|\+|mais))?\s*(?:e\s)?)?pague(?:\s(?:\w+|\-|menos))?", # leve + pague -
+            r"l\+p\-", # l+p-
             r"\b(tradicional|trad\.|trad)\b", # tradicional
             r"\d+%\w+\.?", # percentual
-            r"(?:c/|com)\s*(\d+(?:/\d+)?)(?:\s*(?:" + "|".join(cls.UNIT) + r"))?", # com X unidades
-            r"(\d+(?:/\d+)?)(?:\s*(?:" + "|".join(cls.UNIT) + r"))(?!\s*\w)", # X unidades
-            r"(?:" + "|".join(cls.UNIT) + r")(?!\s*\w)", # Unidades
-            r"(?<!^)\b(\d+(?:[.,]\d+)?)?\s*(?:" + "|".join(cls.DETAILS) + r")\b\.?\b"
+            r"(?<!^)\b(\d+(?:[.,]\d+)?)?\s*(?:" + "|".join(cls.DETAILS) + r")\b\.?\b",
+            r"(?:c/|com)\s*(?:\d+(?:\/\d+)?)(?:\s*(?:" + "|".join(cls.UNIT) + r"))?(?:\s*\w)*", # com X unidades
+            r"(?:\d+(?:\/\d+)?)(?:\s*(?:" + "|".join(cls.UNIT) + r"))(?:\s*\w)*", # X unidades
+            r"\b(?:" + "|".join(cls.UNIT) + r")(?:\s*\w)*", # Unidades
+            r"\b" + "|".join(cls.REMOVE_END) + r".*",
+            r"\+\s*$"
         ]
 
         for pattern in ignore_patterns:
-            name = re.sub(pattern, "", name, flags=re.IGNORECASE)
+            while True:
+                new_name = re.sub(pattern, "", name, flags=re.IGNORECASE)
+                if new_name == name:
+                    break
+                name = new_name
 
         replace_patterns = {
             r"\bp/(?!\s?\d)": "para ", # p/ -> para
             r"\bs/(?!\s?\d)": "sem ", # s/ -> sem
             r"\bc/(?!\s?\d)": "com ", # c/ -> com
-            r"\b\s?/\s?(?!\s?\d)": " e " # X/Y -> X e Y
+            r"\b\s?/\s?(?!\s?\d)": " e ", # X/Y -> X e Y
+            r"\s*\+\s*": " + ",
         }
 
         for pattern, replacement in replace_patterns.items():
@@ -143,7 +165,6 @@ class Transformer(ABC):
         name = name.replace("-", " ")
         name = re.sub(r"(?<!\d)\.(?!\d)", ". ", name)
         name = strip_all(name)
-        name = unidecode(name)
 
         return name.title()
 
@@ -239,39 +260,15 @@ class Transformer(ABC):
 
         def match_brand_name_in_name(name, brand):
             name_words = name.split()
-            brand_words = brand.split("-")
+            brand_words = brand.replace("-", " ").split()
 
-            i = 0
             n = len(name_words)
-            matched_indices = []
+            m = len(brand_words)
 
-            while i < n:
-                name_word_clean = clean_word(name_words[i])
-                brand_first_word_clean = clean_word(brand_words[0])
-
-                if brand_first_word_clean.startswith(name_word_clean):
-                    matched_indices.append(i)
-                    break
-                i += 1
-
-            if matched_indices:
-                i += 1
-                brand_idx = 1
-
-                while i < n and brand_idx < len(brand_words):
-                    name_word_clean = clean_word(name_words[i])
-                    brand_word_clean = clean_word(brand_words[brand_idx])
-
-                    if brand_word_clean.startswith(name_word_clean):
-                        brand_idx += 1
-
-                    matched_indices.append(i)
-                    i += 1
-
-                if brand_idx == len(brand_words):
-                    start = matched_indices[0]
-                    end = matched_indices[-1]
-                    return " ".join(name_words[start:end+1])
+            for i in range(n - m + 1):
+                window = name_words[i:i+m]
+                if all(clean_word(w1) == clean_word(w2) for w1, w2 in zip(window, brand_words)):
+                    return " ".join(window)
 
             return ""
 
@@ -285,7 +282,7 @@ class Transformer(ABC):
 
             for window in range(max(1, length - 2), length + 3):
                 for i in range(len(name) - window + 1):
-                    substr = name[i : i + window]
+                    substr = name[i: i + window]
                     score = fuzz.ratio(substr, brand)
                     if score > best_score:
                         best_score = score
@@ -297,27 +294,27 @@ class Transformer(ABC):
 
         brand_name = match_brand_name_in_name(name, brand)
         if not brand_name:
+            brand_parts = brand.split()
+            for part in brand_parts:
+                if part.lower() in name.lower():
+                    brand_name = part.title()
+                    break
+
+        if not brand_name:
             brand_name = fuzzy_substring_match(name, brand, threshold=80)
 
-        part_before = name.strip()
-        part_after = ""
-        if brand_name:
-            pattern = re.escape(brand_name).replace(r'\ ', r'\s+')
-            match = re.search(pattern, name, flags=re.IGNORECASE)
-            if match:
-                part_before = name[:match.start()].strip()
-                part_after = name[match.end():].strip()
+        if not brand_name:
+            brand_name = brand.replace("-", " ").title()
 
-        part_before = re.sub(r'\s+', ' ', part_before)
-        part_after = re.sub(r'\s+', ' ', part_after)
+        pattern = re.escape(brand_name).replace(r'\ ', r'\s+')
+        match = re.search(pattern, name, flags=re.IGNORECASE)
 
-        full_name = f"{part_before} {brand_name} {part_after}".strip()
-        name = remove_duplicate_words(full_name)
+        if match:
+            name_without_brand = (name[:match.start()] + " " + name[match.end():]).strip()
+        else:
+            name_without_brand = name
 
-        name_words = name.split()
-        brand_words_set = set(clean_word(word) for word in brand_name.split())
-        name_without_brand = " ".join([
-            word for word in name_words if clean_word(word) not in brand_words_set
-        ])
+        name_without_brand = re.sub(r'\s+', ' ', name_without_brand)
+        name_without_brand = remove_duplicate_words(name_without_brand)
 
-        return name, name_without_brand, brand_name
+        return name.title(), name_without_brand.title(), brand_name.title()

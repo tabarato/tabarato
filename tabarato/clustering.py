@@ -9,6 +9,7 @@ import nltk
 from nltk.corpus import stopwords
 from scipy.spatial.distance import pdist
 from scipy.cluster.hierarchy import fcluster, linkage
+from sklearn.cluster import DBSCAN
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.metrics import silhouette_score, davies_bouldin_score, calinski_harabasz_score
 from sklearn.manifold import TSNE
@@ -35,9 +36,16 @@ class Clustering:
         features = cls._get_features(df, model)
 
         print("Clustering...")
-        distance_matrix = pdist(features, metric="cosine")
-        linkage_matrix = linkage(distance_matrix, method="average")
-        df["cluster"] = fcluster(linkage_matrix, t=0.05, criterion="distance")
+        db = DBSCAN(
+            eps=0.2,
+            min_samples=1,
+            metric="cosine"
+        ).fit(features)
+
+        df["cluster"] = db.labels_
+        # distance_matrix = pdist(features, metric="cosine")
+        # linkage_matrix = linkage(distance_matrix, method="average")
+        # df["cluster"] = fcluster(linkage_matrix, t=0.15, criterion="distance")
 
         cls._evaluate_clusters(features, df["cluster"].astype(int).values)
 
