@@ -1,4 +1,5 @@
 from .extractor import Extractor
+from tabarato.utils.excluded_categories import ANGELONI_EXCLUDED_CATEGORIES
 import os
 import pandas as pd
 import aiohttp
@@ -22,6 +23,7 @@ class AngeloniExtractor(Extractor):
             try:
                 async with aiohttp.ClientSession() as session:
                     categories = await cls._get_categories(session=session)
+                    categories = list(set(categories) - set(ANGELONI_EXCLUDED_CATEGORIES))
 
                     semaphore = asyncio.Semaphore(4)
 
@@ -32,7 +34,6 @@ class AngeloniExtractor(Extractor):
                     tasks = [asyncio.create_task(fetch_category(category)) for category in categories]
 
                     results = await asyncio.gather(*tasks, return_exceptions=False)
-
                     products = [item for sublist in results for item in sublist]
 
                     df = pd.DataFrame(products)
