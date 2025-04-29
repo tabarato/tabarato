@@ -33,16 +33,26 @@ class Clustering:
 
         print("Tokenizing...")
         model = Word2Vec.load("data/model/w2v.model")
-        features = cls._get_features(df, model)
+        docs = [
+            [word for word in get_words(n.lower()) if word not in cls.PORTUGUESE_STOPWORDS]
+            for n in df["name_without_brand"]
+        ]
+        docs_phrased = [model.phraser[doc] for doc in docs]
+        df["head"] = [doc[:1] for doc in docs_phrased]
+        df["tail"] = [doc[1:] for doc in docs_phrased]
+
+        Loader.load(pd.DataFrame(df["head"].drop_duplicates().tolist()), "gold", "heads")
+
+        features = cls._get_features(model, df["head"].tolist(), df[["brand"]])
 
         print("Clustering...")
         db = DBSCAN(
-            eps=0.15,
+            eps=0.1,
             min_samples=1,
-            metric="cosine"
+            metric="euclidean"
         ).fit(features)
 
-        df["cluster"] = db.labels_
+        df["cluster"] = db.labels_.astype(str)
         # distance_matrix = pdist(features, metric="cosine")
         # linkage_matrix = linkage(distance_matrix, method="average")
         # df["cluster"] = fcluster(linkage_matrix, t=0.15, criterion="distance")
@@ -76,15 +86,12 @@ class Clustering:
         Loader.load(df, layer="gold", name="products")
 
     @classmethod
-    def _get_features(cls, df, model, min_ngram_freq=5):
-        docs = [get_words(name.lower()) for name in df["name_without_brand"].tolist()]
-        docs_phrased = [model.phraser[doc] for doc in docs]
-
-        all_tokens = Counter(token for doc in docs_phrased for token in doc)
+    def _get_features(cls, model, docs, brands, min_ngram_freq=5):
+        all_tokens = Counter(token for doc in docs for token in doc)
         main_terms = {token for token, count in all_tokens.items() if count >= min_ngram_freq}
 
         embeddings, binaries = [], []
-        for doc in docs_phrased:
+        for doc in docs:
             vecs = []
             for token in doc:
                 if token in model.wv:
@@ -105,11 +112,11 @@ class Clustering:
         embeddings = np.vstack(embeddings)
         binaries = np.vstack(binaries)
 
-        name_features = StandardScaler().fit(embeddings).transform(embeddings)
+        name_features = StandardScaler().fit(embeddings).transform(embeddings) # * 0.6
         # binary_features = StandardScaler().fit(binaries).transform(binaries) * 0.2
-        # brand_encoded = OneHotEncoder(sparse_output=False).fit_transform(df[["brand"]]) * 0.2
+        # brand_features = OneHotEncoder(sparse_output=False).fit_transform(brands) * 0.4
 
-        return name_features
+        return name_features # np.hstack((name_features, brand_features))
 
     @classmethod
     def _evaluate_clusters(cls, features, cluster_labels):
@@ -126,27 +133,25 @@ class Clustering:
             print(f"Davies-Bouldin Index: {davies_bouldin_score(features[valid_mask], cluster_labels[valid_mask]):.3f}")
             print(f"Calinski-Harabasz Index: {calinski_harabasz_score(features[valid_mask], cluster_labels[valid_mask]):.3f}")
 
-        # tsne = TSNE(n_components=2, random_state=42)
-        # reduced = tsne.fit_transform(features)
-
-        # plt.figure(figsize=(14,6))
-        # plt.subplot(1,2,1)
-        # sns.scatterplot(
-        #     x=reduced[:,0], 
-        #     y=reduced[:,1], 
-        #     hue=cluster_labels,
-        #     palette='tab20',
-        #     legend=False
-        # )
-
-        # plt.subplot(1,2,2)
-        # sns.kdeplot(
-        #     x=reduced[:,0], 
-        #     y=reduced[:,1], 
-        #     cmap='viridis', 
-        #     fill=True
-        # )
-        # plt.show()
+        tsne = TSNE(n_components=2, random_state=42)
+        reduced = tsne.fit_transform(features)
+        plt.figure(figsize=(14,6))
+        plt.subplot(1,2,1)
+        sns.scatterplot(
+            x=reduced[:,0], 
+            y=reduced[:,1], 
+            hue=cluster_labels,
+            palette='tab20',
+            legend=False
+        )
+        plt.subplot(1,2,2)
+        sns.kdeplot(
+            x=reduced[:,0], 
+            y=reduced[:,1], 
+            cmap='viridis', 
+            fill=True
+        )
+        plt.show()
 
     @classmethod
     def _correct_brands(cls, df: pd.DataFrame) -> pd.DataFrame:

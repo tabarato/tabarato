@@ -16,7 +16,7 @@ if __name__ == "__main__":
         "--step",
         dest="step",
         default=0,
-        help="Step on the pipeline to run: 0 = All, 1 = Extract; 2 = Tranform; 3 = Clustering",
+        help="Step on the pipeline to run: 0 = All, 1 = Extract; 2 = Tranform; 3 = Word2Vec Training; 4 = Clustering; 5 = Postgres Loader; 6 = Elasticsearch Loader",
     )
     parser.add_argument(
         "--store",

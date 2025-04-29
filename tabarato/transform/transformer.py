@@ -172,6 +172,8 @@ class Transformer(ABC):
         for pattern, replacement in replace_patterns.items():
             name = re.sub(pattern, replacement, name, flags=re.IGNORECASE)
 
+        name = re.sub(r"(?<!\d)\.(?!\d)", ". ", name)
+
         for abbr, replacement in abbreviations.items():
             clean_abbr = abbr.rstrip('.').lower()
             pattern = re.compile(
@@ -181,11 +183,9 @@ class Transformer(ABC):
                 r'(?!\S)',
                 flags=re.IGNORECASE
             )
-            pattern = re.compile(r'\b' + re.escape(abbr.lower()), flags=re.IGNORECASE)
-            name = pattern.sub(replacement + " ", name)
+            name = pattern.sub(replacement, name)
 
         name = name.replace("-", " ")
-        name = re.sub(r"(?<!\d)\.(?!\d)", ". ", name)
         name = strip_all(name)
 
         return name.title()
