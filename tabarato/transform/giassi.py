@@ -10,7 +10,7 @@ class GiassiTransformer(Transformer):
 
     @classmethod
     def id(cls) -> int:
-        return 2
+        return 3
 
     @classmethod
     def transform(cls) -> pd.DataFrame:

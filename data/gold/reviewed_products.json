@@ -1,0 +1,187 @@
+[
+    
+    {
+        "brand": "coca-cola",
+        "products": [
+            "Refrigerante Coca Cola",
+            "Refrigerante Coca Cola Light",
+            "Refrigerante Coca Cola Zero",
+            "Refrigerante Coca Cola Cafe Espresso",
+            "Pack Refrigerante Coca Cola",
+            "Pack Refrigerante Coca Cola + Fanta Guarana",
+            "Pack Refrigerante Coca Cola + Fanta Laranja",
+            "Pack Refrigerante Coca Cola + Sprite"
+        ]
+    },
+    {
+        "brand": "pepsi",
+        "products": [
+            "Refrigerante Pepsi",
+            "Refrigerante Pepsi Black",
+            "Refrigerante Pepsi Twist"
+        ]
+    },
+    {
+        "brand": "antarctica",
+        "products": [
+            "Agua Tonica Antarctica",
+            "Agua Tonica Antarctica Gengibre",
+            "Agua Tonica Antarctica Zero Acucar",
+            "Cerveja Antarctica",
+            "Cerveja Antarctica Subzero",
+            "Refrigerante Antarctica Guarana",
+            "Refrigerante Antarctica Guarana Zero",
+            "Refrigerante Antarctica Soda Limonada",
+            "Refrigerante Antarctica Soda Limonada Zero",
+            "Refrigerante Soda Limonada Antarctica Zero"
+        ]
+    },
+    {
+        "brand": "original",
+        "products": [
+            "Cerveja Original"
+        ]
+    },
+    {
+        "brand": "tirol",
+        "products": [
+            "Leite Tirol Premiare Integral",
+            "Leite Tirol Premiare Semidesnatado",
+            "Leite Tirol Premiare Desnatado",
+            "Leite Tirol Premiare Integral Zero Lactose",
+            "Leite Tirol Premiare Semidesnatado Zero Lactose",
+            "Leite Tirol Premiare Desnatado Zero Lactose",
+            "Leite Tirol Longa Vida Integral",
+            "Leite Tirol Longa Vida Semidesnatado",
+            "Leite Tirol Longa Vida Desnatado",
+            "Leite Tirol Longa Vida Zero Lactose",
+            "Leite Tirol Semidesnatado Zero Lactose Biociclos Kids",
+            "Leite Tirol Semidesnatado Zero Lactose Biociclos Adultos",
+            "Leite Tirol Semidesnatado Zero Lactose Biociclos Senior 50+",
+            "Leite Tirol Semidesnatado Zero Lactose Biociclos + Proteina",
+            "Leite Pasteurizado Tirol Homogeneizado Integral",
+            "Leite Condensado Tirol Semidesnatado",
+            "Leite Condensado Tirol Zero Lactose",
+            "Creme De Leite Tirol",
+            "Creme De Leite Tirol Zero Lactose",
+            "Doce De Leite Tirol",
+            "Doce De Leite Tirol Zero Lactose",
+            "Nata Tirol",
+            "Queijo Mussarela Tirol Fatiado",
+            "Queijo Mussarela Tirol Ralado",
+            "Queijo Mussarela Tirol Zero Lactose Fatiado",
+            "Queijo Prato Tirol Fatiado",
+            "Queijo Processado Tirol Cremoso",
+            "Requeijao Tirol",
+            "Requeijao Tirol Light",
+            "Requeijao Tirol Zero Lactose",
+            "Requeijao Tirol Cheddar",
+            "Requeijao Tirol Com Queijo",
+            "Manteiga Tirol Com Sal ",
+            "Manteiga Tirol Sem Sal",
+            "Manteiga Tirol Com Sal Zero Lactose",
+            "Bebida Lactea Tirol Chocolate",
+            "Bebida Lactea Tirol Chocolate Zero Lactose",
+            "Bebida Lactea Tirol Coco",
+            "Bebida Lactea Tirol Morango",
+            "Bebida Lactea Tirol Frutas E Cereais",
+            "Iogurte Tirol Integral Natural",
+            "Iogurte Tirol Integral Morango",
+            "Iogurte Tirol Integral Coco",
+            "Iogurte Tirol Parcialmente Desnatado Morango Zero Lactose",
+            "Iogurte Tirol Parcialmente Desnatado Salada De Frutas Zero Lactose",
+            "Iogurte Tirol Parcialmente Desnatado Coco Zero Lactose",
+            "Iogurte Tirol Desnatado Mel",
+            "Iogurte Tirol Geleia Maracuja",
+            "Iorgute Tirol Geleia Morango",
+            "Iogurte Tirol Baunilha E Frutas Roxas Com Geleia",
+            "Iogurte Tirol Kon Frutas Pedacos De Abacaxi",
+            "Iogurte Tirol Kon Frutas Pedacos De Morango",
+            "Iogurte Tirol Morango Zero",
+            "Iogurte Tirol Coco Zero",
+            "Iogurte Tirol Integral Laranja, Cenoura E Mel",
+            "Iogurte Tirol Integral Pessego",
+            "Iogurte Tirol Integral Natural",
+            "Iogurte Tirol Integral Abacaxi",
+            "Iogurte Desnatado Light Tirol"
+        ]
+    },
+    {
+        "brand": "downy",
+        "products": [
+            "Amaciante Concentrado Downy Perfume Collection Mistico",
+            "Amaciante Concentrado Downy Perfume Collection Paixao",
+            "Amaciante Concentrado Downy Perfume Collection Adoravel",
+            "Amaciante Concentrado Downy Perfume Collection Liberdade",
+            "Amaciante Concentrado Downy Lirios Do Campo",
+            "Amaciante Concentrado Downy Sensitive",
+            "Amaciante Concentrado Downy Brisa Suave",
+            "Amaciante Concentrado Downy Brisa Intenso",
+            "Amaciante Concentrado Downy Sports",
+            "Amaciante Concentrado Downy Frescor Da Primavera",
+            "Amaciante Concentrado Downy Brisa De Verao",
+            "Amaciante Concentrado Downy Agua Fresca",
+            "Amaciante Concentrado Downy Natural Coco E Menta",
+            "Amaciante Concentrado Downy Sensitive",
+            "Desinfetante Higienizador Downy"
+        ]
+    },
+    {
+        "brand": "hiper",
+        "products": [
+            "Pao De Alho Hiper Recheio Calabresa",
+            "Pao De Alho Hiper"
+        ]
+    },
+    {
+        "brand": "shamara",
+        "products": [
+            "Pao De Alho Shamara",
+            "Pao De Alho Shamara Com Queijo"
+        ]
+    },
+    {
+        "brand": "santa-massa",
+        "products": [
+            "Pao De Alho Santa Massa",
+            "Pao De Alho Santa Massa Levemente Picante",
+            "Pao De Alho Santa Massa Bolinha",
+            "Pao De Cebola Santa Massa",
+            "Pao De Cebola Santa Massa Bolinha",
+            "Pao Doce Santa Massa Doce De Leite",
+            "Farofa Santa Massa",
+            "Farofa Santa Massa Picante"
+        ]
+    },
+    {
+        "brand": "rocha",
+        "products": [
+            "Farinha De Mandioca Rocha Branca",
+            "Farinha De Mandioca Rocha Flocada Biju",
+            "Farinha De Mandioca Rocha Torrada",
+            "Farinha De Mandioca Rocha Extra Fina Azeda",
+            "Farinha De Mandioca Rocha Extra Fina Premium",
+            "Farinha De Mandioca Rocha Amarga Grossa",
+            "Tapioca Rocha",
+            "Tapioca Rocha Com Creatina",
+            "Tapioca Rocha Com Batata Doce",
+            "Tapioca Rocha Sem Gluten",
+            "Tapioca Rocha Granulada",
+            "Tapioca Rocha Granulada Sem Gluten",
+            "Farofa De Mandioca Rocha Com Pimenta",
+            "Farofa De Mandioca Rocha Suave",
+            "Farofa De Mandioca Rocha Premium",
+            "Farofa De Mandioca Rocha Bacon",
+            "Farofa Rocha Bacon",
+            "Farofa Rocha Bacon Sem Gluten",
+            "Farofa Rocha Picanha",
+            "Farofa Rocha Picanha Sem Gluten",
+            "Farofa Rocha Com Pimenta Sem Gluten",
+            "Polvilho Rocha Azedo",
+            "Mistura Para Rosquinhas Rocha Zero Gluten E Lactose",
+            "Mistura Pao De Queijo Rocha Zero Gluten E Lactose",
+            "Farinha De Milho Rocha Fuba Tipo Fino",
+            "Flocao De Milho Rocha"
+        ]
+    }
+]
