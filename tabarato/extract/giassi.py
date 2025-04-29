@@ -1,4 +1,5 @@
 from .extractor import Extractor
+from tabarato.utils.excluded_categories import GIASSI_EXCLUDED_CATEGORIES
 import os
 import pandas as pd
 import aiohttp
@@ -22,6 +23,7 @@ class GiassiExtractor(Extractor):
             try:
                 async with aiohttp.ClientSession() as session:
                     categories = await cls._get_categories(session=session)
+                    categories = list(set(categories) - set(GIASSI_EXCLUDED_CATEGORIES))
 
                     semaphore = asyncio.Semaphore(4)
 
