@@ -1,16 +1,12 @@
-from .utils.string_utils import strip_all, get_words
+from .utils.string_utils import get_words
 from .loader import Loader
-from collections import Counter
 import numpy as np
-import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import nltk
 from nltk.corpus import stopwords
-from scipy.spatial.distance import pdist
-from scipy.cluster.hierarchy import fcluster, linkage
 from sklearn.cluster import DBSCAN
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import silhouette_score, davies_bouldin_score, calinski_harabasz_score
 from sklearn.manifold import TSNE
 from gensim.models import Word2Vec
@@ -29,35 +25,20 @@ class Clustering:
         df = Loader.read("silver")
         df = df[~((df["price"] == 0) & (df["old_price"] == 0))]
 
-        # cls._correct_brands(df)
-
         print("Tokenizing...")
         model = Word2Vec.load("data/model/w2v.model")
-        docs = [
-            [word for word in get_words(n.lower()) if word not in cls.PORTUGUESE_STOPWORDS]
-            for n in df["name_without_brand"]
-        ]
-        docs_phrased = [model.phraser[doc] for doc in docs]
-        df["head"] = [doc[:1] for doc in docs_phrased]
-        df["tail"] = [doc[1:] for doc in docs_phrased]
-
-        Loader.load(pd.DataFrame(df["head"].drop_duplicates().tolist()), "gold", "heads")
-
-        features = cls._get_features(model, df["head"].tolist(), df[["brand"]])
+        features = cls._get_features(model, df["name_without_brand"])
 
         print("Clustering...")
         db = DBSCAN(
-            eps=0.1,
+            eps=0.01,
             min_samples=1,
             metric="euclidean"
         ).fit(features)
 
-        df["cluster"] = db.labels_.astype(str)
-        # distance_matrix = pdist(features, metric="cosine")
-        # linkage_matrix = linkage(distance_matrix, method="average")
-        # df["cluster"] = fcluster(linkage_matrix, t=0.15, criterion="distance")
+        df["cluster"] = db.labels_
 
-        cls._evaluate_clusters(features, df["cluster"].astype(int).values)
+        cls._evaluate_clusters(features, df["cluster"].values)
 
         df["clustered_name"] = df["name"]
 
@@ -76,6 +57,11 @@ class Clustering:
 
         df_grouped["variations"] = df_grouped.apply(cls._group_variations, axis=1)
         df_grouped.drop(columns=["name", "weight", "measure", "store_id", "price", "old_price", "link", "cart_link", "image_url"], inplace=True)
+        
+        def has_multiple_sellers(variations):
+            return any(len(v["sellers"]) > 1 for v in variations)
+
+        df_grouped = df_grouped[df_grouped["variations"].apply(has_multiple_sellers)]
 
         return df_grouped
 
@@ -86,12 +72,15 @@ class Clustering:
         Loader.load(df, layer="gold", name="products")
 
     @classmethod
-    def _get_features(cls, model, docs, brands, min_ngram_freq=5):
-        all_tokens = Counter(token for doc in docs for token in doc)
-        main_terms = {token for token, count in all_tokens.items() if count >= min_ngram_freq}
+    def _get_features(cls, model, names):
+        docs = [
+            [word for word in get_words(n.lower()) if word not in cls.PORTUGUESE_STOPWORDS]
+            for n in names
+        ]
+        docs_phrased = [model.phraser[doc] for doc in docs]
 
-        embeddings, binaries = [], []
-        for doc in docs:
+        embeddings = []
+        for doc in docs_phrased:
             vecs = []
             for token in doc:
                 if token in model.wv:
@@ -104,19 +93,14 @@ class Clustering:
                 emb = emb / norm if norm != 0 else emb
             else:
                 emb = np.zeros(model.vector_size)
+
             embeddings.append(emb)
 
-            presence = np.array([1 if term in doc else 0 for term in main_terms])
-            binaries.append(presence)
-
         embeddings = np.vstack(embeddings)
-        binaries = np.vstack(binaries)
 
-        name_features = StandardScaler().fit(embeddings).transform(embeddings) # * 0.6
-        # binary_features = StandardScaler().fit(binaries).transform(binaries) * 0.2
-        # brand_features = OneHotEncoder(sparse_output=False).fit_transform(brands) * 0.4
+        name_features = StandardScaler().fit(embeddings).transform(embeddings)
 
-        return name_features # np.hstack((name_features, brand_features))
+        return name_features
 
     @classmethod
     def _evaluate_clusters(cls, features, cluster_labels):
@@ -152,47 +136,6 @@ class Clustering:
             fill=True
         )
         plt.show()
-
-    @classmethod
-    def _correct_brands(cls, df: pd.DataFrame) -> pd.DataFrame:
-        all_brands = set(df["brand"].unique())
-
-        brand_product_names = {}
-        for brand in all_brands:
-            brand_product_names[brand] = set(df[df["brand"] == brand]["name"].str.lower())
-
-        corrected_brands = []
-        corrected_names = []
-        
-        for _, row in df.iterrows():
-            current_brand = row["brand"].lower()
-            current_name = row["name"]
-
-            normalized_name = strip_all(current_name.lower().replace(current_brand, ""))
-            
-            for brand in all_brands:
-                if brand == current_brand:
-                    continue
-
-                if brand in normalized_name:
-                    if current_name in brand_product_names[brand]:
-                        print(current_brand, "|", brand)
-                        current_brand = brand
-                        break
-
-                    if normalized_name in brand_product_names[brand]:
-                        print(current_name, "|", normalized_name)
-                        current_name = normalized_name.title()
-                        current_brand = brand
-                        break
-
-            corrected_brands.append(current_brand)
-            corrected_names.append(current_name)
-
-        df["brand"] = corrected_brands
-        df["name"] = corrected_names
-
-        return df
 
     @classmethod
     def _group_variations(cls, row: pd.Series) -> dict:
