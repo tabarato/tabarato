@@ -49,6 +49,13 @@ CREATE TABLE IF NOT EXISTS store_products (
     image_url TEXT
 );
 
+CREATE TABLE product_family (
+	id SERIAL PRIMARY KEY,
+	id_brand INT REFERENCES brands(id),
+	clustered_name TEXT,
+	embedded_name vector(768)
+);
+
 INSERT INTO stores (id, name) VALUES
 (1, 'angeloni'),
 (2, 'bistek');
