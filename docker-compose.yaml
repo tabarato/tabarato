@@ -5,8 +5,9 @@ services:
   # postgrest-db #
   ################
   db:
+    build:
+      context: ./pgvector
     container_name: db
-    image: pgrouting/pgrouting:13-3.5-3.7
     ports:
       - "5432:5432"
     environment:
@@ -17,7 +18,7 @@ services:
       - DB_SCHEMA=${DB_SCHEMA}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init-postgres.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./pgvector/init-postgres.sql:/docker-entrypoint-initdb.d/init.sql
       - ./data:/data
     networks:
       - postgres-connect

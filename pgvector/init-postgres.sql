@@ -1,6 +1,5 @@
 -- Create Extensions
-CREATE EXTENSION PostGIS;
-CREATE EXTENSION pgRouting;
+CREATE EXTENSION IF NOT EXISTS vector;
 
 -- PgREST users
 CREATE ROLE authenticator WITH SUPERUSER;
@@ -35,8 +34,7 @@ CREATE TABLE IF NOT EXISTS products (
 
 CREATE TABLE IF NOT EXISTS stores (
     id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL UNIQUE,
-    geometry public.GEOMETRY(POINT, 4326)
+    name TEXT NOT NULL UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS store_products (
@@ -51,6 +49,6 @@ CREATE TABLE IF NOT EXISTS store_products (
     image_url TEXT
 );
 
-INSERT INTO stores (id, name, geometry) VALUES
-(1, 'angeloni', 'POINT (-49.37666810299541 -28.680083083584385)'),
-(2, 'bistek', 'POINT (-49.36981307150592 -28.68114410287651)');
+INSERT INTO stores (id, name) VALUES
+(1, 'angeloni'),
+(2, 'bistek');

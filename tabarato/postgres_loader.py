@@ -13,7 +13,7 @@ class PostgresLoader:
 
     @classmethod
     def process(cls) -> pd.DataFrame:
-        return Loader.read("gold", "products")
+        return Loader.read("embedded", "reviewed_products_embeddings")
 
     @classmethod
     def load(cls, df: pd.DataFrame):
@@ -71,13 +71,14 @@ class PostgresLoader:
                         store["old_price"],
                         store["link"],
                         store["cart_link"],
-                        variation["image_url"]
+                        variation["image_url"],
+                        variation["embedded_name"]
                     ))
 
         cursor.executemany("""
             INSERT INTO store_products (
                 id_store, id_product, name,
-                price, old_price, link, cart_link, image_url
+                price, old_price, link, cart_link, image_url, embedded_name
             )
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """, store_product_rows)

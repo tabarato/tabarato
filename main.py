@@ -8,7 +8,7 @@ from tabarato.transform.giassi import GiassiTransformer
 from tabarato.clustering import Clustering
 from tabarato.postgres_loader import PostgresLoader
 from tabarato.elasticsearch_loader import ElasticsearchLoader
-from tabarato.model import Model
+# from tabarato.model import Model
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -29,38 +29,38 @@ if __name__ == "__main__":
     store = str(args.store)
     print(str(step), "|", store)
 
-    if step == 1 or step == 0:
-        if store == "angeloni" or store == "":
-            df = AngeloniExtractor.extract()
-            AngeloniExtractor.load(df)
+    # if step == 1 or step == 0:
+    #     if store == "angeloni" or store == "":
+    #         df = AngeloniExtractor.extract()
+    #         AngeloniExtractor.load(df)
 
-        if store == "bistek" or store == "":
-            df = BistekExtractor.extract()
-            BistekExtractor.load(df)
+    #     if store == "bistek" or store == "":
+    #         df = BistekExtractor.extract()
+    #         BistekExtractor.load(df)
 
-        if store == "giassi" or store == "":
-            df = GiassiExtractor.extract()
-            GiassiExtractor.load(df)
+    #     if store == "giassi" or store == "":
+    #         df = GiassiExtractor.extract()
+    #         GiassiExtractor.load(df)
     
-    if step == 2 or step == 0:
-        if store == "angeloni" or store == "":
-            df = AngeloniTransformer.transform()
-            AngeloniTransformer.load(df)
+    # if step == 2 or step == 0:
+    #     if store == "angeloni" or store == "":
+    #         df = AngeloniTransformer.transform()
+    #         AngeloniTransformer.load(df)
  
-        if store == "bistek" or store == "":
-            df = BistekTransformer.transform()
-            BistekTransformer.load(df)
+    #     if store == "bistek" or store == "":
+    #         df = BistekTransformer.transform()
+    #         BistekTransformer.load(df)
  
-        if store == "giassi" or store == "":
-            df = GiassiTransformer.transform()
-            GiassiTransformer.load(df)
+    #     if store == "giassi" or store == "":
+    #         df = GiassiTransformer.transform()
+    #         GiassiTransformer.load(df)
 
-    if step == 3 or step == 0:
-        Model.train_model()
+    # if step == 3 or step == 0:
+    #     Model.train_model()
 
-    if step == 4 or step == 0:
-        df = Clustering.process()
-        Clustering.load(df)
+    # if step == 4 or step == 0:
+    #     df = Clustering.process()
+    #     Clustering.load(df)
 
     if step == 5 or step == 0:
         df = PostgresLoader.process()
