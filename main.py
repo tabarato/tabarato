@@ -66,6 +66,6 @@ if __name__ == "__main__":
         df = PostgresLoader.process()
         PostgresLoader.load(df)
 
-    if step == 6 or step == 0:
-        df = ElasticsearchLoader.process()
-        ElasticsearchLoader.load(df)
+    # if step == 6 or step == 0:
+    #     df = ElasticsearchLoader.process()
+    #     ElasticsearchLoader.load(df)
