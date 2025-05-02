@@ -18,7 +18,7 @@ class AngeloniTransformer(Transformer):
 
         df.rename(columns={
             "productName": "name",
-            "productId": "refId",
+            "productId": "ref_id",
             "Quantidade da embalagem": "weight",
             "Unidade de medida": "measure"},
             inplace=True)

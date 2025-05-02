@@ -18,7 +18,7 @@ class BistekTransformer(Transformer):
 
         df.rename(columns={
             "productName": "name",
-            "productId": "refId",
+            "productId": "ref_id",
             "Peso Produto": "weight",
             "Unidade de Medida": "measure"},
             inplace=True)

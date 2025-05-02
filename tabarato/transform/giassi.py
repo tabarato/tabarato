@@ -1,6 +1,7 @@
 from .transformer import Transformer
 from tabarato.loader import Loader
 import pandas as pd
+import re
 
 
 class GiassiTransformer(Transformer):
@@ -18,12 +19,14 @@ class GiassiTransformer(Transformer):
 
         df.rename(columns={
             "productName": "name",
-            "productId": "refId",
+            "productId": "ref_id",
             "multiplicador": "weight",
             "unidade": "measure"},
             inplace=True)
         
         df[["image_url", "cart_link", "price", "old_price"]] = df.apply(cls._extract_item_info, axis=1)
+
+        df["name"] = df.apply(cls._remove_word, axis=1)
 
         return super().transform(df)
 
@@ -50,3 +53,13 @@ class GiassiTransformer(Transformer):
             values["image_url"] = image.get("imageUrl", None)
         
         return values
+
+    @classmethod
+    def _remove_word(cls, row):
+        name = row["name"]
+        brand = row["brand"]
+        word_to_ignore = "original"
+        
+        if brand.strip().lower() != word_to_ignore:
+            return re.sub(r'\b' + word_to_ignore + r'\b', '', name, flags=re.IGNORECASE).strip()
+        return name

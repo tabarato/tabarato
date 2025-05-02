@@ -59,13 +59,13 @@ if __name__ == "__main__":
         Model.train_model()
 
     if step == 4 or step == 0:
-        df = Clustering.process()
+        df = Clustering.process(store)
         Clustering.load(df)
 
     if step == 5 or step == 0:
         df = PostgresLoader.process()
         PostgresLoader.load(df)
 
-    # if step == 6 or step == 0:
-    #     df = ElasticsearchLoader.process()
-    #     ElasticsearchLoader.load(df)
+    if step == 6 or step == 0:
+        df = ElasticsearchLoader.process()
+        ElasticsearchLoader.load(df)

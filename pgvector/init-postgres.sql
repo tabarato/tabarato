@@ -19,43 +19,47 @@ CREATE EVENT TRIGGER pgrst_watch
   ON ddl_command_end
   EXECUTE PROCEDURE pgrst_watch();
 
-CREATE TABLE IF NOT EXISTS brands (
-    id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL UNIQUE
+CREATE TABLE brand (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE
 );
 
-CREATE TABLE IF NOT EXISTS products (
-    id SERIAL PRIMARY KEY,
-    clustered_name TEXT NOT NULL,
-    id_brand INT REFERENCES brands(id),
-    weight INTEGER,
-    measure TEXT
-);
-
-CREATE TABLE IF NOT EXISTS stores (
-    id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL UNIQUE
-);
-
-CREATE TABLE IF NOT EXISTS store_products (
-    id SERIAL PRIMARY KEY,
-    id_store INT NOT NULL REFERENCES stores(id),
-    id_product INT NOT NULL REFERENCES products(id),
-    name TEXT NOT NULL,
-    price NUMERIC,
-    old_price NUMERIC,
-    link TEXT,
-    cart_link TEXT,
-    image_url TEXT
+CREATE TABLE store (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE
 );
 
 CREATE TABLE product_family (
 	id SERIAL PRIMARY KEY,
-	id_brand INT REFERENCES brands(id),
-	clustered_name TEXT,
+	id_brand SERIAL REFERENCES brand(id),
+	name TEXT,
 	embedded_name vector(768)
 );
 
-INSERT INTO stores (id, name) VALUES
+CREATE TABLE product (
+	id SERIAL PRIMARY KEY,
+	id_product_family SERIAL REFERENCES product_family(id),
+	name TEXT,
+	embedded_name vector(768),
+  weight INTEGER,
+  measure TEXT
+);
+
+CREATE TABLE store_product (
+  id SERIAL PRIMARY KEY,
+  id_store SERIAL NOT NULL REFERENCES store(id),
+  id_product SERIAL NOT NULL REFERENCES product(id),
+  ref_id INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  price NUMERIC(10, 4),
+  old_price NUMERIC(10, 4),
+  link TEXT,
+  cart_link TEXT,
+  image_url TEXT,
+  UNIQUE (id_store, id_product)
+);
+
+INSERT INTO store (id, name) VALUES
 (1, 'angeloni'),
-(2, 'bistek');
+(2, 'bistek'),
+(3, 'giassi');

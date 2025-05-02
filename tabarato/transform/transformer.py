@@ -1,13 +1,13 @@
 from tabarato.utils.string_utils import strip_all
 from tabarato.loader import Loader
 import datetime as dt
+import json
 import math
 import re
 import pandas as pd
 from abc import ABC, abstractmethod
 from unidecode import unidecode
 from rapidfuzz import fuzz
-import json
 
 
 class Transformer(ABC):
@@ -56,6 +56,7 @@ class Transformer(ABC):
         "pote",
         "pt",
         "kg",
+        "litros",
         "litro",
         "lt",
         "caixa",
@@ -74,10 +75,7 @@ class Transformer(ABC):
         "economica",
         "ec",
         "squeeze",
-        "sq",
-        r"ed\. limitada",
-        r"ed\. lim",
-        r"ed\. l",
+        "sq"
     ]
     UNIT = [
         "unidades",
@@ -87,12 +85,12 @@ class Transformer(ABC):
         "un"
     ]
     REMOVE_END = [
-        "c/ cada",
-        "com cada",
-        "cada",
         "gratis",
-        "% de desconto",
-        "% desconto",
+        r"\d*% de desconto",
+        r"\d*% desconto",
+        r"ed\. limitada",
+        r"ed\. lim",
+        r"ed\. l"
     ]
 
     @classmethod
@@ -118,7 +116,7 @@ class Transformer(ABC):
         df[["name", "name_without_brand", "brand_name"]] = df.apply(lambda row: cls._normalize_name_and_brand(row["name"], row["brand"]), axis=1, result_type="expand")
 
         return df.filter(items=[
-            "name", "name_without_brand", "brand_name", "brand", "refId",
+            "name", "brand", "ref_id",
             "measure", "weight", "link", "cart_link",
             "price", "old_price", "description", "details",
             "image_url"
@@ -142,16 +140,16 @@ class Transformer(ABC):
         name = unidecode(name)
 
         ignore_patterns = [
-            r"\b\d+(?:[.,]\d+)?\s*(?:" + "|".join(cls.MEASUREMENT) + r")\b\.?\b", # peso
+            r"\b\d+(?:[.,]\d+)?\s*(?:" + "|".join(cls.MEASUREMENT) + r")\b\.?\s*(?:\bcada\b)?", # peso
             r"(?:\b(?:leve|l)(?:\s*(?:\+|mais|\d))\s*(?:e\s)?)(?:pague|p)(?:\s*(?:\-|menos|\d))?", # leve + pague -
             r"\b(tradicional|trad\.|trad)\b", # tradicional
             r"\d+%\w+\.?", # percentual
             r"(?<!^)\b(\d+(?:[.,]\d+)?)?\s*(?:" + "|".join(cls.DETAILS) + r")\b\.?\b",
-            r"(?:c/|com)\s*(?:\d+(?:\/\d+)?)(?:\s*(?:" + "|".join(cls.UNIT) + r"))?(?:\s*\w)*", # com X unidades
-            r"(?:\d+(?:\/\d+)?)(?:\s*(?:" + "|".join(cls.UNIT) + r"))(?:\s*\w)*", # X unidades
-            r"\b(?:" + "|".join(cls.UNIT) + r")(?:\s*\w)*", # Unidades
-            r"\b" + "|".join(cls.REMOVE_END) + r".*",
-            r"\+\s*$"
+            r"(?:c/|com)\s*(?:\d+(?:\/\d+)?)(?:\s*(?:" + "|".join(cls.UNIT) + r")\b)?.*", # com X unidades
+            r"(?:\d+(?:\/\d+)?)(?:\s*(?:" + "|".join(cls.UNIT) + r")\b).*", # X unidades
+            r"\b(?:" + "|".join(cls.UNIT) + r")\b.*", # Unidades
+            r"\+\s*$",
+            r"\.\s*$"
         ]
 
         for pattern in ignore_patterns:
@@ -166,7 +164,7 @@ class Transformer(ABC):
             r"\bs/(?!\s?\d)": "sem ", # s/ -> sem
             r"\bc/(?!\s?\d)": "com ", # c/ -> com
             r"\b\s?/\s?(?!\s?\d)": " e ", # X/Y -> X e Y
-            r"\s*\+\s*": " + ",
+            r"(?<!\d)\s*\+\s*": " + ",
         }
 
         for pattern, replacement in replace_patterns.items():
@@ -221,9 +219,9 @@ class Transformer(ABC):
 
         if not weight or not measure or math.isnan(weight) or (measure not in cls.SOLID_MEASUREMENT and measure not in cls.LIQUID_MEASUREMENT and measure not in cls.UNIT):
             name = row["name"]
-            solid_match = re.search(f"(\d+)\s*({'|'.join(cls.SOLID_MEASUREMENT)})", name, re.IGNORECASE)
+            solid_match = re.search(fr"(\d+)\s*({'|'.join(cls.SOLID_MEASUREMENT)})", name, re.IGNORECASE)
             liquid_match = re.search(fr"(\d+(?:[.,]\d+)?)\s*({'|'.join(cls.LIQUID_MEASUREMENT)})", name, re.IGNORECASE)
-            unit_match = re.search(f"(\d+)\s*({'|'.join(cls.UNIT)})", name, re.IGNORECASE)
+            unit_match = re.search(fr"(\d+)\s*({'|'.join(cls.UNIT)})", name, re.IGNORECASE)
 
             if solid_match:
                 weight = float(solid_match.group(1))
@@ -331,11 +329,16 @@ class Transformer(ABC):
         pattern = re.escape(brand_name).replace(r'\ ', r'\s+')
         match = re.search(pattern, name, flags=re.IGNORECASE)
 
+        remove_end_pattern = r"\b(" + "|".join(cls.REMOVE_END) + r").*$"
+
         if match:
             name_without_brand = (name[:match.start()] + " " + name[match.end():]).strip()
+            name = strip_all(name[:match.end()] + " " + re.sub(remove_end_pattern, "", name[match.end():], flags=re.IGNORECASE))
         else:
             name_without_brand = name
+            name = strip_all(re.sub(remove_end_pattern, "", name, flags=re.IGNORECASE))
 
+        name_without_brand = re.sub(remove_end_pattern, "", name_without_brand, flags=re.IGNORECASE)
         name_without_brand = re.sub(r'\s+', ' ', name_without_brand)
         name_without_brand = remove_duplicate_words(name_without_brand)
 

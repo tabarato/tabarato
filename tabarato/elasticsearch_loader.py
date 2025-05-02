@@ -58,13 +58,15 @@ class ElasticsearchLoader:
                 sp.cart_link,
                 sp.image_url,
                 p.id AS product_id,
-                p.clustered_name,
+                p.name,
                 p.weight,
                 p.measure,
+                pf.id AS product_family_id,
                 b.name AS brand
-            FROM store_products sp
-            JOIN products p ON sp.id_product = p.id
-            JOIN brands b ON p.id_brand = b.id
+            FROM store_product sp
+            JOIN product p ON sp.id_product = p.id
+            JOIN product_family pf ON p.id_product_family = pf.id
+            JOIN brand b ON pf.id_brand = b.id
         """)
         rows = cursor.fetchall()
         colnames = [desc[0] for desc in cursor.description]
@@ -78,12 +80,12 @@ class ElasticsearchLoader:
         grouped_products = {}
 
         for record in records:
-            key = (record["clustered_name"], record["brand"])
+            key = record["product_family_id"]
             variation_key = record["product_id"]
 
             if key not in grouped_products:
                 grouped_products[key] = {
-                    "clustered_name": record["clustered_name"],
+                    "name": record["name"],
                     "brand": record["brand"],
                     "variations": {}
                 }
@@ -111,6 +113,6 @@ class ElasticsearchLoader:
                 variation["min_price"] = min(prices) if prices else None
                 variation["max_price"] = max(prices) if prices else None
                 variations_list.append(variation)
-            product["variations"] = variations_list
+            product["variations"] = sorted(variations_list, key=lambda v: v["weight"] or 0)
 
         return list(grouped_products.values())

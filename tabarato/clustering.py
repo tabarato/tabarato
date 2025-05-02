@@ -1,5 +1,6 @@
 from .utils.string_utils import get_words
 from .loader import Loader
+import requests
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -12,6 +13,13 @@ from sklearn.manifold import TSNE
 from gensim.models import Word2Vec
 import dotenv
 import seaborn as sns
+from sentence_transformers import SentenceTransformer
+from PIL import Image
+from io import BytesIO
+import torch
+import torchvision.transforms as transforms
+import timm
+
 
 dotenv.load_dotenv()
 
@@ -21,30 +29,27 @@ class Clustering:
     PORTUGUESE_STOPWORDS = set(stopwords.words("portuguese"))
 
     @classmethod
-    def process(cls) -> pd.DataFrame:
-        df = Loader.read("silver")
+    def process(cls, store) -> pd.DataFrame:
+        df = Loader.read("silver", store)
         df = df[~((df["price"] == 0) & (df["old_price"] == 0))]
 
-        print("Tokenizing...")
-        model = Word2Vec.load("data/model/w2v.model")
-        features = cls._get_features(model, df["name_without_brand"])
+        embedded_names, embedded_images = cls._get_embeddings(df["name"].tolist(), df["image_url"].tolist())
+        df["embedded_name"] = embedded_names.tolist()
+        # df["embedded_image"] = embedded_images.tolist()
 
-        print("Clustering...")
         db = DBSCAN(
-            eps=0.01,
+            eps=0.075,
             min_samples=1,
-            metric="euclidean"
-        ).fit(features)
+            metric="cosine"
+        ).fit(embedded_names)
 
         df["cluster"] = db.labels_
 
-        cls._evaluate_clusters(features, df["cluster"].values)
-
-        df["clustered_name"] = df["name"]
+        cls._evaluate_clusters(embedded_names, df["cluster"].values)
 
         df_grouped = df.groupby(["brand", "cluster"]).agg({
-            "clustered_name": "first",
             "name": list,
+            "embedded_name": list,
             "store_id": list,
             "weight": list,
             "measure": list,
@@ -52,16 +57,14 @@ class Clustering:
             "old_price": list,
             "link": list,
             "cart_link": list,
-            "image_url": list
+            "image_url": list,
+            "ref_id": list
         }).reset_index()
 
         df_grouped["variations"] = df_grouped.apply(cls._group_variations, axis=1)
-        df_grouped.drop(columns=["name", "weight", "measure", "store_id", "price", "old_price", "link", "cart_link", "image_url"], inplace=True)
-        
-        def has_multiple_sellers(variations):
-            return any(len(v["sellers"]) > 1 for v in variations)
-
-        df_grouped = df_grouped[df_grouped["variations"].apply(has_multiple_sellers)]
+        df_grouped["name"] = df_grouped["name"].apply(lambda row: row[0])
+        df_grouped["embedded_name"] = df_grouped["embedded_name"].apply(lambda row: row[0])
+        df_grouped.drop(columns=["weight", "measure", "store_id", "price", "old_price", "link", "cart_link", "image_url"], inplace=True)
 
         return df_grouped
 
@@ -72,35 +75,62 @@ class Clustering:
         Loader.load(df, layer="gold", name="products")
 
     @classmethod
-    def _get_features(cls, model, names):
-        docs = [
-            [word for word in get_words(n.lower()) if word not in cls.PORTUGUESE_STOPWORDS]
-            for n in names
+    def _get_embeddings(cls, names, image_urls):
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+
+        names = [
+            " ".join([word for word in get_words(name.lower()) if word not in cls.PORTUGUESE_STOPWORDS])
+            for name in names
         ]
-        docs_phrased = [model.phraser[doc] for doc in docs]
+        sentence_model = SentenceTransformer("all-mpnet-base-v2", device=device)
+        embedded_names = sentence_model.encode(names, normalize_embeddings=True)
 
-        embeddings = []
-        for doc in docs_phrased:
-            vecs = []
-            for token in doc:
-                if token in model.wv:
-                    weight = 2.0 if "_" in token else 1.0
-                    vecs.append(model.wv[token] * weight)
+        # visual_model = timm.create_model("vit_base_patch16_224", pretrained=True)
+        # visual_model.eval()
+        # visual_model.to(device)
 
-            if vecs:
-                emb = np.mean(vecs, axis=0)
-                norm = np.linalg.norm(emb)
-                emb = emb / norm if norm != 0 else emb
-            else:
-                emb = np.zeros(model.vector_size)
+        # if torch.cuda.is_available():
+        #     visual_model = visual_model.cuda()
 
-            embeddings.append(emb)
+        # transform = transforms.Compose([
+        #     transforms.Resize((224, 224)),
+        #     transforms.ToTensor(),
+        #     transforms.Normalize(
+        #         mean=[0.485, 0.456, 0.406], 
+        #         std=[0.229, 0.224, 0.225]
+        #     )
+        # ])
 
-        embeddings = np.vstack(embeddings)
+        # image_tensors = []
+        # valid_indices = []
+        # for idx, url in enumerate(image_urls):
+        #     try:
+        #         response = requests.get(url, timeout=5)
+        #         image = Image.open(BytesIO(response.content)).convert("RGB")
+        #         image_tensor = transform(image)
+        #         image_tensors.append(image_tensor)
+        #         valid_indices.append(idx)
+        #     except Exception as e:
+        #         print(f"[{idx}] Erro ao embutir imagem: {e}")
+        #         image_tensors.append(None)
 
-        name_features = StandardScaler().fit(embeddings).transform(embeddings)
+        # batch_tensor = []
+        # for img in image_tensors:
+        #     if img is not None:
+        #         batch_tensor.append(img.unsqueeze(0))
+        #     else:
+        #         batch_tensor.append(torch.zeros((1, 3, 224, 224)))
 
-        return name_features
+        # batch_tensor = torch.cat(batch_tensor).to(device)
+
+        # with torch.no_grad():
+        #     embedded_images = visual_model(batch_tensor)
+        #     if isinstance(embedded_images, (list, tuple)):
+        #         embedded_images = embedded_images[0]
+
+        # embedded_images = embedded_images.cpu().numpy().tolist()
+
+        return embedded_names, []
 
     @classmethod
     def _evaluate_clusters(cls, features, cluster_labels):
@@ -141,12 +171,12 @@ class Clustering:
     def _group_variations(cls, row: pd.Series) -> dict:
         variations = [
             {
-                "name": n, "weight": w, "measure": m, "store_id": s, "price": p,
-                "old_price": op, "link": l, "cart_link": cl, "image_url": img
+                "name": n, "embedded_name": en, "weight": w, "measure": m, "store_id": s, "price": p,
+                "old_price": op, "link": l, "cart_link": cl, "image_url": img, "ref_id": ri
             }
-            for n, w, m, s, p, op, l, cl, img in zip(
-                row["name"], row["weight"], row["measure"], row["store_id"],
-                row["price"], row["old_price"], row["link"], row["cart_link"], row["image_url"]
+            for n, en, w, m, s, p, op, l, cl, img, ri in zip(
+                row["name"], row["embedded_name"], row["weight"], row["measure"], row["store_id"],
+                row["price"], row["old_price"], row["link"], row["cart_link"], row["image_url"], row["ref_id"]
             )
         ]
 
@@ -154,6 +184,7 @@ class Clustering:
 
         df_grouped = df.groupby(["weight", "measure"], as_index=False).agg(
             name=("name", "first"), # Apenas um nome representativo por variação
+            embedded_name=("embedded_name", "first"), # Apenas um nome representativo por variação
             image_url=("image_url", "first"), # Apenas uma imagem representativa por variação
             sellers=("store_id", lambda x: [
                 {
@@ -161,11 +192,12 @@ class Clustering:
                     "price": price,
                     "old_price": old_price,
                     "link": link,
-                    "cart_link": cart_link
+                    "cart_link": cart_link,
+                    "ref_id": ref_id
                 }
-                for store, price, old_price, link, cart_link in zip(
+                for store, price, old_price, link, cart_link, ref_id in zip(
                     x, df.loc[x.index, "price"], df.loc[x.index, "old_price"],
-                    df.loc[x.index, "link"], df.loc[x.index, "cart_link"]
+                    df.loc[x.index, "link"], df.loc[x.index, "cart_link"], df.loc[x.index, "ref_id"]
                 )
             ])
         )

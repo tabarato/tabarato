@@ -2,7 +2,7 @@
     {
         "brand": "coca-cola",
         "cluster": 2252,
-        "clustered_name": "Refrigerante Coca Cola",
+        "name": "Refrigerante Coca Cola",
         "variations": [
             {
                 "image_url": "https://superangeloni.vteximg.com.br/arquivos/ids/227665/5120478.jpg?v=638459481471000000",
@@ -79,7 +79,7 @@
     {
         "brand": "coca-cola",
         "cluster": 2253,
-        "clustered_name": "Refrigerante Coca Cola Zero",
+        "name": "Refrigerante Coca Cola Zero",
         "variations": [
             {
                 "image_url": "https://bistek.vteximg.com.br/arquivos/ids/205310/1886754.jpg.jpg?v=638751327644430000",
@@ -135,7 +135,7 @@
     {
         "brand": "coca-cola",
         "cluster": 2266,
-        "clustered_name": "Refrigerante Coca Cola Light",
+        "name": "Refrigerante Coca Cola Light",
         "variations": [
             {
                 "image_url": "https://superangeloni.vteximg.com.br/arquivos/ids/163595/4179031_2_zoom.jpg?v=638037834539830000",
@@ -149,7 +149,7 @@
     {
         "brand": "coca-cola",
         "cluster": 2251,
-        "clustered_name": "Refrigerante Coca Cola Sem Acucar",
+        "name": "Refrigerante Coca Cola Sem Acucar",
         "variations": [
             {
                 "image_url": "https://superangeloni.vteximg.com.br/arquivos/ids/163616/4259670_1_zoom.jpg?v=638037834767770000",
@@ -205,7 +205,7 @@
     {
         "brand": "coca-cola",
         "cluster": 17132,
-        "clustered_name": "Kit Refrigerante Coca Cola + Fanta Laranja",
+        "name": "Kit Refrigerante Coca Cola + Fanta Laranja",
         "variations": [
             {
                 "image_url": "https://giassi.vteximg.com.br/arquivos/ids/2744447/Kit-Refrigerante-Coca-Cola-Original---Laranja-Fanta-2l-Cada-Leve-Mais-Pague-Menos.png?v=638627317993500000",
@@ -219,7 +219,7 @@
     {
         "brand": "pepsi",
         "cluster": 2252,
-        "clustered_name": "Refrigerante Pepsi",
+        "name": "Refrigerante Pepsi",
         "variations": [
             {
                 "image_url": "https://bistek.vteximg.com.br/arquivos/ids/203735/1893300.png?v=638626992527970000",
@@ -268,7 +268,7 @@
     {
         "brand": "pepsi",
         "cluster": 2258,
-        "clustered_name": "Refrigerante Pepsi Twist",
+        "name": "Refrigerante Pepsi Twist",
         "variations": [
             {
                 "image_url": "https://superangeloni.vteximg.com.br/arquivos/ids/237802/1184870.jpg?v=638543423670500000",
@@ -289,7 +289,7 @@
     {
         "brand": "pepsi",
         "cluster": 2261,
-        "clustered_name": "Refrigerante Pepsi Black",
+        "name": "Refrigerante Pepsi Black",
         "variations": [
             {
                 "image_url": "https://giassi.vteximg.com.br/arquivos/ids/1161545/Refrigerante-Cola-Zero-Acucar-Pepsi-Black-Lata-350ml.png?v=638510026917400000",
@@ -317,7 +317,7 @@
     {
         "brand": "antarctica",
         "cluster": 2254,
-        "clustered_name": "Refrigerante Antarctica Guarana Zero",
+        "name": "Refrigerante Antarctica Guarana Zero",
         "variations": [
             {
                 "image_url": "https://superangeloni.vteximg.com.br/arquivos/ids/240166/5183594.jpg?v=638560409291730000",
@@ -345,7 +345,7 @@
     {
         "brand": "antarctica",
         "cluster": 2259,
-        "clustered_name": "Refrigerante Antarctica Guarana",
+        "name": "Refrigerante Antarctica Guarana",
         "variations": [
             {
                 "image_url": "https://superangeloni.vteximg.com.br/arquivos/ids/241319/7891991014908--1-.jpg?v=638580314279800000",
@@ -394,7 +394,7 @@
     {
         "brand": "antarctica",
         "cluster": 6949,
-        "clustered_name": "Agua Tonica Antarctica",
+        "name": "Agua Tonica Antarctica",
         "variations": [
             {
                 "image_url": "https://superangeloni.vteximg.com.br/arquivos/ids/277492/122203.jpg.jpg?v=638745548849030000",
@@ -415,7 +415,7 @@
     {
         "brand": "antarctica",
         "cluster": 9382,
-        "clustered_name": "Cerveja Antarctica",
+        "name": "Cerveja Antarctica",
         "variations": [
             {
                 "image_url": "https://superangeloni.vteximg.com.br/arquivos/ids/236262/7891991000796--1-.jpg?v=638537243775900000",
@@ -429,7 +429,7 @@
     {
         "brand": "antarctica",
         "cluster": 9382,
-        "clustered_name": "Cerveja Antarctica Subzero",
+        "name": "Cerveja Antarctica Subzero",
         "variations": [
             {
                 "image_url": "https://bistek.vteximg.com.br/arquivos/ids/194144/cerveja-antarctica-subzero-lata-350ml.jpg?v=638537987309730000",
@@ -443,7 +443,7 @@
     {
         "brand": "original",
         "cluster": 9422,
-        "clustered_name": "Cerveja Original",
+        "name": "Cerveja Original",
         "variations": [
             {
                 "image_url": "https://bistek.vteximg.com.br/arquivos/ids/191362/1905112.png?v=638494968904830000",
@@ -457,7 +457,7 @@
     {
         "brand": "tirol",
         "cluster": 1253,
-        "clustered_name": "Manteiga Tirol Com Sal",
+        "name": "Manteiga Tirol Com Sal",
         "variations": [
             {
                 "image_url": "https://giassi.vteximg.com.br/arquivos/ids/2756549/Manteiga-de-Primeira-Qualidade-com-Sal-Tirol-Pote-200g.png?v=638627537254530000",
@@ -478,7 +478,7 @@
     {
         "brand": "tirol",
         "cluster": 1253,
-        "clustered_name": "Manteiga Tirol Sem Sal",
+        "name": "Manteiga Tirol Sem Sal",
         "variations": [
             {
                 "image_url": "https://giassi.vteximg.com.br/arquivos/ids/2755932/Manteiga-de-Primeira-Qualidade-sem-Sal-Tirol-Pote-200g.png?v=638627525910230000",
@@ -492,7 +492,7 @@
     {
         "brand": "tirol",
         "cluster": 2438,
-        "clustered_name": "Creme De Leite Tirol",
+        "name": "Creme De Leite Tirol",
         "variations": [
             {
                 "image_url": "https://superangeloni.vteximg.com.br/arquivos/ids/219472/3423261.jpg?v=638367811253800000",
@@ -513,7 +513,7 @@
     {
         "brand": "tirol",
         "cluster": 3481,
-        "clustered_name": "Doce De Leite Tirol",
+        "name": "Doce De Leite Tirol",
         "variations": [
             {
                 "image_url": "https://superangeloni.vteximg.com.br/arquivos/ids/190017/3468110_1_zoom.jpg?v=638039936890200000",
@@ -527,7 +527,7 @@
     {
         "brand": "tirol",
         "cluster": 5915,
-        "clustered_name": "Requeijao Tirol Cremoso",
+        "name": "Requeijao Tirol Cremoso",
         "variations": [
             {
                 "image_url": "https://superangeloni.vteximg.com.br/arquivos/ids/214725/3410998_1.jpg?v=638350393463330000",
@@ -548,7 +548,7 @@
     {
         "brand": "tirol",
         "cluster": 8407,
-        "clustered_name": "Iogurte Desnatado Tirol Light",
+        "name": "Iogurte Desnatado Tirol Light",
         "variations": [
             {
                 "image_url": "https://giassi.vteximg.com.br/arquivos/ids/2034054/Iogurte-Desnatado-Light-Tirol-Copo-160g.png?v=638588437141370000",
@@ -562,7 +562,7 @@
     {
         "brand": "tirol",
         "cluster": 8781,
-        "clustered_name": "Bebida Lactea Tirol Coco",
+        "name": "Bebida Lactea Tirol Coco",
         "variations": [
             {
                 "image_url": "https://superangeloni.vteximg.com.br/arquivos/ids/173709/3853511_1_zoom.jpg?v=638039538689000000",
@@ -577,7 +577,7 @@
     {
         "brand": "tirol",
         "cluster": 11133,
-        "clustered_name": "Leite Integral Tirol",
+        "name": "Leite Integral Tirol",
         "variations": [
             {
                 "image_url": "https://bistek.vteximg.com.br/arquivos/ids/195922/leite-uht-tirol-1l-integral-ctp.jpg?v=638537987842700000",
@@ -591,7 +591,7 @@
     {
         "brand": "tirol",
         "cluster": 13431,
-        "clustered_name": "Leite Integral Tirol Zero Lactose",
+        "name": "Leite Integral Tirol Zero Lactose",
         "variations": [
             {
                 "image_url": "https://giassi.vteximg.com.br/arquivos/ids/2753367/Leite-UHT-Integral-Zero-Lactose-Tirol-Caixa-com-Tampa-1l.png?v=638627478036200000",
@@ -606,7 +606,7 @@
     {
         "brand": "tirol",
         "cluster": 13430,
-        "clustered_name": "Leite Semidesnatado Tirol Zero Lactose",
+        "name": "Leite Semidesnatado Tirol Zero Lactose",
         "variations": [
             {
                 "image_url": "https://giassi.vteximg.com.br/arquivos/ids/2035171/Leite-UHT-Semidesnatado-Zero-Lactose-Tirol-Premiare-Caixa-com-Tampa-1l.png?v=638588500419730000",
@@ -620,7 +620,7 @@
     {
         "brand": "tirol",
         "cluster": 13439,
-        "clustered_name": "Leite Semidesnatado Tirol Biociclos + Proteina Zero Lactose",
+        "name": "Leite Semidesnatado Tirol Biociclos + Proteina Zero Lactose",
         "variations": [
             {
                 "image_url": "https://giassi.vteximg.com.br/arquivos/ids/8675743/Leite-UHT-Semidesnatado-Zero-Lactose-Tirol-Biociclos--Proteina-Caixa-com-Tampa-1l.jpg?v=638791148559130000",
@@ -634,7 +634,7 @@
     {
         "brand": "tirol",
         "cluster": 12761,
-        "clustered_name": "Bebida Lactea Tirol Chocolate Zero Lactose",
+        "name": "Bebida Lactea Tirol Chocolate Zero Lactose",
         "variations": [
             {
                 "image_url": "https://giassi.vteximg.com.br/arquivos/ids/2032492/Bebida-Lactea-UHT-Chocolate-Zero-Lactose-Tirol-Caixa-1l.png?v=638588352178030000",
@@ -648,7 +648,7 @@
     {
         "brand": "downy",
         "cluster": 8521,
-        "clustered_name": "Amaciante Concentrado Downy Brisa Intenso",
+        "name": "Amaciante Concentrado Downy Brisa Intenso",
         "variations": [
             {
                 "image_url": "https://superangeloni.vteximg.com.br/arquivos/ids/248306/7500435201292_2.jpg?v=638586298149800000",
@@ -683,7 +683,7 @@
     {
         "brand": "downy",
         "cluster": 8524,
-        "clustered_name": "Amaciante Concentrado Downy Brisa De Verao",
+        "name": "Amaciante Concentrado Downy Brisa De Verao",
         "variations": [
             {
                 "image_url": "https://giassi.vteximg.com.br/arquivos/ids/3439225/Amaciante-de-Roupa-Concentrado-Brisa-de-Verao-Downy-Frasco-500ml.png?v=638646124630330000",
@@ -725,7 +725,7 @@
     {
         "brand": "downy",
         "cluster": 8527,
-        "clustered_name": "Amaciante Concentrado Downy Brisa Suave",
+        "name": "Amaciante Concentrado Downy Brisa Suave",
         "variations": [
             {
                 "image_url": "https://giassi.vteximg.com.br/arquivos/ids/3439253/Amaciante-de-Roupa-Concentrado-Brisa-Suave-Downy-Frasco-500ml.png?v=638646125100070000",
@@ -760,7 +760,7 @@
     {
         "brand": "downy",
         "cluster": 8545,
-        "clustered_name": "Amaciante Concentrado Downy Lirios Do Campo",
+        "name": "Amaciante Concentrado Downy Lirios Do Campo",
         "variations": [
             {
                 "image_url": "https://superangeloni.vteximg.com.br/arquivos/ids/249344/7506195143858_1.jpg?v=638586584433970000",
@@ -788,7 +788,7 @@
     {
         "brand": "downy",
         "cluster": 9567,
-        "clustered_name": "Amaciante Concentrado Downy Sensitive",
+        "name": "Amaciante Concentrado Downy Sensitive",
         "variations": [
             {
                 "image_url": "https://bistek.vteximg.com.br/arquivos/ids/198733/amaciante-concdowny-900ml-sensitive.jpg?v=638537989013130000",
@@ -809,7 +809,7 @@
     {
         "brand": "downy",
         "cluster": 16295,
-        "clustered_name": "Amaciante Concentrado Downy Perfume Collection Paixao",
+        "name": "Amaciante Concentrado Downy Perfume Collection Paixao",
         "variations": [
             {
                 "image_url": "https://giassi.vteximg.com.br/arquivos/ids/3439197/Amaciante-de-Roupa-Concentrado-Paixao-Downy-Perfume-Collection-Frasco-900ml.png?v=638646124097930000",
@@ -830,7 +830,7 @@
     {
         "brand": "downy",
         "cluster": 16300,
-        "clustered_name": "Amaciante Concentrado Downy Perfume Collection Mistico",
+        "name": "Amaciante Concentrado Downy Perfume Collection Mistico",
         "variations": [
             {
                 "image_url": "https://giassi.vteximg.com.br/arquivos/ids/3439200/Amaciante-de-Roupa-Concentrado-Mistico-Downy-Perfume-Collection-Frasco-900ml.png?v=638646124137570000",
@@ -844,7 +844,7 @@
     {
         "brand": "santa-massa",
         "cluster": 4481,
-        "clustered_name": "Pao De Alho Santa Massa",
+        "name": "Pao De Alho Santa Massa",
         "variations": [
             {
                 "image_url": "https://bistek.vteximg.com.br/arquivos/ids/197822/pao-alho-santa-massa-240g-tradicional.jpg?v=638537988520030000",
@@ -872,7 +872,7 @@
     {
         "brand": "santa-massa",
         "cluster": 4482,
-        "clustered_name": "Pao De Alho Santa Massa Picante",
+        "name": "Pao De Alho Santa Massa Picante",
         "variations": [
             {
                 "image_url": "https://bistek.vteximg.com.br/arquivos/ids/204402/1916173.jpg?v=638702322213130000",
@@ -893,7 +893,7 @@
     {
         "brand": "santa-massa",
         "cluster": 7997,
-        "clustered_name": "Pao Doce Santa Massa Doce De Leite",
+        "name": "Pao Doce Santa Massa Doce De Leite",
         "variations": [
             {
                 "image_url": "https://superangeloni.vteximg.com.br/arquivos/ids/240874/4634940.jpg?v=638579574287870000",
@@ -907,7 +907,7 @@
     {
         "brand": "rocha",
         "cluster": 2546,
-        "clustered_name": "Tapioca Rocha",
+        "name": "Tapioca Rocha",
         "variations": [
             {
                 "image_url": "https://superangeloni.vteximg.com.br/arquivos/ids/234470/4091101.jpg?v=638518948919400000",
@@ -928,7 +928,7 @@
     {
         "brand": "rocha",
         "cluster": 2569,
-        "clustered_name": "Farinha De Mandioca Rocha Torrada",
+        "name": "Farinha De Mandioca Rocha Torrada",
         "variations": [
             {
                 "image_url": "https://superangeloni.vteximg.com.br/arquivos/ids/264474/5292015.jpg?v=638621724242900000",
@@ -942,7 +942,7 @@
     {
         "brand": "rocha",
         "cluster": 8654,
-        "clustered_name": "Polvilho Rocha Azedo",
+        "name": "Polvilho Rocha Azedo",
         "variations": [
             {
                 "image_url": "https://superangeloni.vteximg.com.br/arquivos/ids/234468/3768869.jpg?v=638518948102970000",
@@ -956,7 +956,7 @@
     {
         "brand": "rocha",
         "cluster": 14951,
-        "clustered_name": "Farofa De Mandioca Rocha Bacon",
+        "name": "Farofa De Mandioca Rocha Bacon",
         "variations": [
             {
                 "image_url": "https://giassi.vteximg.com.br/arquivos/ids/2113781/Farofa-de-Mandioca-Bacon-Rocha-Alimentos-Pacote-250g.jpg?v=638593459013600000",
@@ -970,7 +970,7 @@
     {
         "brand": "rocha",
         "cluster": 14953,
-        "clustered_name": "Farofa De Mandioca Rocha Suave",
+        "name": "Farofa De Mandioca Rocha Suave",
         "variations": [
             {
                 "image_url": "https://giassi.vteximg.com.br/arquivos/ids/2113776/Farofa-de-Mandioca-Suave-Rocha-Alimentos-Pacote-250g.jpg?v=638593458737930000",
@@ -984,7 +984,7 @@
     {
         "brand": "rocha",
         "cluster": 14955,
-        "clustered_name": "Farofa Mandioca Rocha Premium",
+        "name": "Farofa Mandioca Rocha Premium",
         "variations": [
             {
                 "image_url": "https://giassi.vteximg.com.br/arquivos/ids/2756667/Farofa-Mandioca-Rocha-Premium-Pacote-300gr.png?v=638627539426900000",
@@ -998,7 +998,7 @@
     {
         "brand": "rocha",
         "cluster": 14957,
-        "clustered_name": "Farofa De Mandioca Rocha Com Pimenta",
+        "name": "Farofa De Mandioca Rocha Com Pimenta",
         "variations": [
             {
                 "image_url": "https://giassi.vteximg.com.br/arquivos/ids/2113775/Farofa-de-Mandioca-com-Pimenta-Tradicional-Rocha-Alimentos-Pacote-250g.jpg?v=638593458683100000",
