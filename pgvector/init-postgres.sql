@@ -59,6 +59,9 @@ CREATE TABLE store_product (
   UNIQUE (id_store, id_product)
 );
 
+CREATE INDEX idx_product_family_vector ON product_family
+USING ivfflat (embedded_name vector_l2_ops) WITH (lists = 100);
+
 INSERT INTO store (id, name) VALUES
 (1, 'angeloni'),
 (2, 'bistek'),

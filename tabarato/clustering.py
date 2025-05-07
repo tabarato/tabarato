@@ -27,9 +27,11 @@ nltk.download("stopwords")
 
 class Clustering:
     PORTUGUESE_STOPWORDS = set(stopwords.words("portuguese"))
+    STORE = ""
 
     @classmethod
     def process(cls, store) -> pd.DataFrame:
+        cls.STORE = store
         df = Loader.read("silver", store)
         df = df[~((df["price"] == 0) & (df["old_price"] == 0))]
 
@@ -38,14 +40,14 @@ class Clustering:
         # df["embedded_image"] = embedded_images.tolist()
 
         db = DBSCAN(
-            eps=0.075,
+            eps=0.05,
             min_samples=1,
             metric="cosine"
         ).fit(embedded_names)
 
         df["cluster"] = db.labels_
 
-        cls._evaluate_clusters(embedded_names, df["cluster"].values)
+        # cls._evaluate_clusters(embedded_names, df["cluster"].values)
 
         df_grouped = df.groupby(["brand", "cluster"]).agg({
             "name": list,
@@ -64,7 +66,7 @@ class Clustering:
         df_grouped["variations"] = df_grouped.apply(cls._group_variations, axis=1)
         df_grouped["name"] = df_grouped["name"].apply(lambda row: row[0])
         df_grouped["embedded_name"] = df_grouped["embedded_name"].apply(lambda row: row[0])
-        df_grouped.drop(columns=["weight", "measure", "store_id", "price", "old_price", "link", "cart_link", "image_url"], inplace=True)
+        df_grouped.drop(columns=["weight", "measure", "store_id", "price", "old_price", "link", "cart_link", "image_url", "ref_id"], inplace=True)
 
         return df_grouped
 
@@ -72,7 +74,7 @@ class Clustering:
     def load(cls, df):
         # df = ti.xcom_pull(task_ids = "process_task")
 
-        Loader.load(df, layer="gold", name="products")
+        Loader.load(df, layer="gold", name=cls.STORE)
 
     @classmethod
     def _get_embeddings(cls, names, image_urls):

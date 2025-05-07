@@ -14,12 +14,14 @@ class PostgresLoader:
     POSTGRES_DB = os.getenv("POSTGRES_DB")
 
     @classmethod
-    def process(cls) -> pd.DataFrame:
-        return Loader.read("gold", "products")
+    def process(cls, store) -> pd.DataFrame:
+        return Loader.read("gold", store)
 
     @classmethod
     def load(cls, df: pd.DataFrame):
         # df = ti.xcom_pull(task_ids = "process_task")
+        if df.empty:
+            return
 
         conn = psycopg2.connect(
             dbname=cls.POSTGRES_DB,
