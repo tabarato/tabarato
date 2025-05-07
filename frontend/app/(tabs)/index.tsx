@@ -16,7 +16,7 @@ interface Variation {
 interface Product {
   id: string;
   brand: string;
-  clustered_name: string;
+  name: string;
   variations: Variation[];
 }
 
@@ -41,7 +41,7 @@ export default function TabOneScreen() {
                 query: searchText,
                 type: "most_fields",
                 fields: [
-                  "clustered_name^3",
+                  "name^3",
                   "brand"
                 ]
               }
@@ -86,7 +86,7 @@ export default function TabOneScreen() {
       {results.map(product => (
         <Card key={product.id} style={{ marginBottom: 20, borderRadius: 12, elevation: 2 }}>
           <Card.Title
-            title={product.clustered_name}
+            title={product.name}
             subtitle={`Marca: ${product.brand}`}
             titleStyle={{ fontWeight: 'bold' }}
           />

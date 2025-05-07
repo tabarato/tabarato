@@ -31,11 +31,7 @@ docker-compose down --volumes
 
 The Python environment should be configured with the following commands:
 
-`
-python -m venv env
-.\env\Scripts\activate
-pip install -r .\requirements.txt
-`
+`python -m venv env .\env\Scripts\activate pip install -r .\requirements.txt`
 
 The ETL pipeline can be run with the following commands:
 
@@ -44,18 +40,16 @@ The ETL pipeline can be run with the following commands:
     - 0 (default): run all the pipeline;
     - 1: extract data;
     - 2: transform data;
-    - 3: train the model;
-    - 4: execute clustering;
-    - 5: load data into PostgreSQL;
+    - 3: execute clustering;
+    - 4: load data into PostgreSQL;
+    - 5: upsert data into PostgreSQL;
     - 6: load data into Elasticsearch.
   - store: the id of the store to execute, executes for all stores if nothing is passed
 - You can only run steps 5 and 6 to test the searching results;
 
 The frontend can be run with the following commands:
 
-`
-npx expo start
-`
+`npx expo start`
 
 ## Routes
 
