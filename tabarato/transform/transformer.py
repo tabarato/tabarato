@@ -75,7 +75,8 @@ class Transformer(ABC):
         "economica",
         "ec",
         "squeeze",
-        "sq"
+        "sq",
+        "tampa"
     ]
     UNIT = [
         "unidades",

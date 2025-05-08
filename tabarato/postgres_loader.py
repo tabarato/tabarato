@@ -89,7 +89,7 @@ class PostgresLoader:
                 product_rows.append((
                     family_id,
                     variation["name"],
-                    cls._to_vector(variation["embedded_name"]),
+                    # cls._to_vector(variation["embedded_name"]),
                     variation["weight"],
                     variation["measure"]
                 ))
@@ -97,7 +97,7 @@ class PostgresLoader:
         execute_values(
             cursor,
             """
-            INSERT INTO product (id_product_family, name, embedded_name, weight, measure)
+            INSERT INTO product (id_product_family, name, weight, measure)
             VALUES %s
             """,
             product_rows

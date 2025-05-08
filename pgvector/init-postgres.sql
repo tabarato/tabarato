@@ -40,7 +40,6 @@ CREATE TABLE product (
 	id SERIAL PRIMARY KEY,
 	id_product_family SERIAL REFERENCES product_family(id),
 	name TEXT,
-	embedded_name vector(768),
   weight INTEGER,
   measure TEXT
 );

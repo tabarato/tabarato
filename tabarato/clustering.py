@@ -10,6 +10,7 @@ from sklearn.cluster import DBSCAN
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import silhouette_score, davies_bouldin_score, calinski_harabasz_score
 from sklearn.manifold import TSNE
+from sklearn.decomposition import PCA
 from gensim.models import Word2Vec
 import dotenv
 import seaborn as sns
@@ -23,7 +24,7 @@ import timm
 
 dotenv.load_dotenv()
 
-nltk.download("stopwords")
+nltk.download("stopwords", quiet=True)
 
 class Clustering:
     PORTUGUESE_STOPWORDS = set(stopwords.words("portuguese"))
@@ -36,6 +37,8 @@ class Clustering:
         df = df[~((df["price"] == 0) & (df["old_price"] == 0))]
 
         embedded_names, embedded_images = cls._get_embeddings(df["name"].tolist(), df["image_url"].tolist())
+        # pca = PCA(n_components=128)
+        # embedded_names = pca.fit_transform(embedded_names)
         df["embedded_name"] = embedded_names.tolist()
         # df["embedded_image"] = embedded_images.tolist()
 
@@ -186,7 +189,7 @@ class Clustering:
 
         df_grouped = df.groupby(["weight", "measure"], as_index=False).agg(
             name=("name", "first"), # Apenas um nome representativo por variação
-            embedded_name=("embedded_name", "first"), # Apenas um nome representativo por variação
+            # embedded_name=("embedded_name", "first"), # Apenas um nome representativo por variação
             image_url=("image_url", "first"), # Apenas uma imagem representativa por variação
             sellers=("store_id", lambda x: [
                 {
