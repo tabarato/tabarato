@@ -47,7 +47,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--method",
         dest="method",
-        default=0,
+        default=1,
         help="Method to vectorize and clusterize data: 0 = Bertimbau, 1 = Sentence Transformer; 2 = Word2Vec",
     )
     args = parser.parse_args()
