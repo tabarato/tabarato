@@ -46,6 +46,9 @@
                         "analyzer": "autocomplete",
                         "search_analyzer": "standard"
                     },
+                    "stores": {
+                        "type": "text"
+                    },
                     "weight": {
                         "type": "integer"
                     },

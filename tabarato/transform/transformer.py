@@ -76,7 +76,8 @@ class Transformer(ABC):
         "ec",
         "squeeze",
         "sq",
-        "tampa"
+        "tampa",
+        "tp"
     ]
     UNIT = [
         "unidades",
@@ -145,7 +146,7 @@ class Transformer(ABC):
             r"(?:\b(?:leve|l)(?:\s*(?:\+|mais|\d))\s*(?:e\s)?)(?:pague|p)(?:\s*(?:\-|menos|\d))?", # leve + pague -
             r"\b(tradicional|trad\.|trad)\b", # tradicional
             r"\d+%\w+\.?", # percentual
-            r"(?<!^)\b(\d+(?:[.,]\d+)?)?\s*(?:" + "|".join(cls.DETAILS) + r")\b\.?\b",
+            r"(?<!^)(?:c/|com)?\b(\d+(?:[.,]\d+)?)?\s*(?:" + "|".join(cls.DETAILS) + r")\b\.?\b",
             r"(?:c/|com)\s*(?:\d+(?:\/\d+)?)(?:\s*(?:" + "|".join(cls.UNIT) + r")\b)?.*", # com X unidades
             r"(?:\d+(?:\/\d+)?)(?:\s*(?:" + "|".join(cls.UNIT) + r")\b).*", # X unidades
             r"\b(?:" + "|".join(cls.UNIT) + r")\b.*", # Unidades

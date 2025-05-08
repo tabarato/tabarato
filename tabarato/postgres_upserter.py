@@ -1,4 +1,5 @@
 from .loader import Loader
+from .utils.string_utils import get_words
 import os
 import pandas as pd
 import psycopg2
@@ -48,10 +49,12 @@ class PostgresUpserter:
         new_variations = 0
         new_store_products = 0
         ignored_products = 0
+        existent_products = 0
 
         for _, row in tqdm(df.iterrows(), total=len(df)):
             embedded_vector = row["embedded_name"]
             id_brand = row["id_brand"]
+            name = row["name"]
 
             already_exists = False
 
@@ -80,12 +83,13 @@ class PostgresUpserter:
                             seller["link"], seller["cart_link"], variation["image_url"],
                             seller["store_id"], seller["ref_id"]
                         ))
+                        existent_products += 1
                         already_exists = True
 
             if already_exists:
                 continue
 
-            family_id = cls._match_product_family(cursor, embedded_vector, id_brand)
+            family_id = cls._match_product_family(cursor, embedded_vector, id_brand, name)
             if not family_id:
                 ignored_products += 1
                 continue
@@ -138,19 +142,20 @@ class PostgresUpserter:
 
         print("New products in stores ", str(new_store_products))
         print("New variations in products ", str(new_variations))
+        print("Existent products ", str(existent_products))
         print("Ignored products ", str(ignored_products))
 
     @classmethod
-    def _match_product_family(cls, cursor, embedded_vector, id_brand, similarity_threshold=1.5):
+    def _match_product_family(cls, cursor, embedded_vector, id_brand, name, similarity_threshold=0.95):
         cursor.execute(
             """
             SELECT id, 1 - (embedded_name <#> %s::vector) AS similarity
             FROM product_family
-            WHERE id_brand = %s
+            WHERE id_brand = %s AND name LIKE %s
             ORDER BY embedded_name <#> %s::vector
             LIMIT 1
             """,
-            (cls._to_vector(embedded_vector), id_brand, cls._to_vector(embedded_vector))
+            (cls._to_vector(embedded_vector), id_brand, f"{get_words(name)[0]}%", cls._to_vector(embedded_vector))
         )
         result = cursor.fetchone()
         if result and result[1] >= similarity_threshold:

@@ -7,6 +7,7 @@ from tabarato.transform.angeloni import AngeloniTransformer
 from tabarato.extract.giassi import GiassiExtractor
 from tabarato.transform.giassi import GiassiTransformer
 from tabarato.clustering import Clustering
+from tabarato.model import Model
 from tabarato.postgres_loader import PostgresLoader
 from tabarato.postgres_upserter import PostgresUpserter
 from tabarato.elasticsearch_loader import ElasticsearchLoader
@@ -43,9 +44,16 @@ if __name__ == "__main__":
         default=None,
         help="Store to process",
     )
+    parser.add_argument(
+        "--method",
+        dest="method",
+        default=0,
+        help="Method to vectorize and clusterize data: 0 = Bertimbau, 1 = Sentence Transformer; 2 = Word2Vec",
+    )
     args = parser.parse_args()
     step = int(args.step)
     store = args.store
+    method = args.method
 
     all_stores = ["angeloni", "bistek", "giassi"]
     stores_to_process = [store] if store else all_stores
@@ -61,16 +69,19 @@ if __name__ == "__main__":
 
     if step == 3 or step == 0:
         print("Start clusterization")
+        if method == 2:
+            Model.train_model()
+
         if store == "angeloni" or store == None:
-            df = Clustering.process("angeloni")
+            df = Clustering.process("angeloni", method)
             Clustering.load(df)
  
         if store == "bistek" or store == None:
-            df = Clustering.process("bistek")
+            df = Clustering.process("bistek", method)
             Clustering.load(df)
  
         if store == "giassi" or store == None:
-            df = Clustering.process("giassi")
+            df = Clustering.process("giassi", method)
             Clustering.load(df)
 
     if step == 4 or step == 0:

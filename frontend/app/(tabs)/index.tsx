@@ -11,6 +11,7 @@ interface Variation {
   image_url: string;
   min_price: number;
   max_price: number;
+  stores: string[];
 }
 
 interface Product {
@@ -24,6 +25,19 @@ export default function TabOneScreen() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Product[]>([]);
   const [cart, setCart] = useState<Variation[]>([]);
+  const [showStores, setShowStores] = useState(false);
+  const [secretCount, setSecretCount] = useState(0);
+
+  const handleSecretTap = () => {
+    setSecretCount(prev => {
+      const next = prev + 1;
+      if (next >= 5) {
+        setShowStores(true);
+      }
+      return next;
+    });
+  };
+
   const theme = useTheme();
 
   const search = async (searchText: string) => {
@@ -75,6 +89,12 @@ export default function TabOneScreen() {
 
   return (
     <ScrollView style={{ padding: 20, backgroundColor: '#FAFAFA' }}>
+      <Text
+        onPress={handleSecretTap}
+        style={{ textAlign: 'center', marginBottom: 10, color: '#999' }}
+      >
+        🛠️ Dev Mode
+      </Text>
       <TextInput
         label="Buscar produto"
         value={query}
@@ -118,6 +138,28 @@ export default function TabOneScreen() {
                       <Text style={{ marginTop: 4, fontSize: 15, fontWeight: 'bold' }}>
                         {priceDisplay}
                       </Text>
+                      {showStores && (
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }}>
+                          {variation.stores.map((store, idx) => (
+                            <Card
+                              key={idx}
+                              style={{
+                                marginRight: 12,
+                                paddingVertical: 6,
+                                paddingHorizontal: 12,
+                                backgroundColor: '#F0F4FF',
+                                borderRadius: 10,
+                                minWidth: 100,
+                                justifyContent: 'center',
+                              }}
+                            >
+                              <Card.Content style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                <Text style={{ fontWeight: '600', fontSize: 14, color: '#3B4CCA' }}>🏬 {store}</Text>
+                              </Card.Content>
+                            </Card>
+                          ))}
+                        </ScrollView>
+                      )}
                       <Button
                         mode="contained-tonal"
                         onPress={() => addToCart(variation)}
