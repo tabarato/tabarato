@@ -50,13 +50,13 @@ class ElasticsearchLoader:
         cursor.execute("""
             SELECT
                 sp.id AS store_product_id,
-                sp.id_store,
                 sp.name,
                 sp.price,
                 sp.old_price,
                 sp.link,
                 sp.cart_link,
                 sp.image_url,
+                s.name as store_name,
                 p.id AS product_id,
                 p.name,
                 p.weight,
@@ -67,6 +67,7 @@ class ElasticsearchLoader:
             JOIN product p ON sp.id_product = p.id
             JOIN product_family pf ON p.id_product_family = pf.id
             JOIN brand b ON pf.id_brand = b.id
+            JOIN store s ON sp.id_store = s.id
         """)
         rows = cursor.fetchall()
         colnames = [desc[0] for desc in cursor.description]
@@ -99,12 +100,18 @@ class ElasticsearchLoader:
                     "weight": int(record["weight"]) if record["weight"] else None,
                     "measure": record["measure"],
                     "image_url": record["image_url"],
-                    "prices": []
+                    "prices": [],
+                    "stores": set()
                 }
 
             price = float(record["price"]) if record["price"] else None
             if price:
                 product["variations"][variation_key]["prices"].append(price)
+
+            store = record["store_name"]
+            stores = product["variations"][variation_key]["stores"]
+            if store and store not in stores:
+                stores.add(store)
 
         for product in grouped_products.values():
             variations_list = []
@@ -112,6 +119,7 @@ class ElasticsearchLoader:
                 prices = variation.pop("prices")
                 variation["min_price"] = min(prices) if prices else None
                 variation["max_price"] = max(prices) if prices else None
+                variation["stores"] = list(variation["stores"])
                 variations_list.append(variation)
             product["variations"] = sorted(variations_list, key=lambda v: v["weight"] or 0)
 

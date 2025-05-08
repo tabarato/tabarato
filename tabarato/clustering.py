@@ -15,11 +15,15 @@ from gensim.models import Word2Vec
 import dotenv
 import seaborn as sns
 from sentence_transformers import SentenceTransformer
+from transformers import AutoTokenizer, AutoModel
 from PIL import Image
 from io import BytesIO
 import torch
 import torchvision.transforms as transforms
 import timm
+from tqdm import tqdm
+from gensim.models import Word2Vec
+from gensim.models.phrases import Phraser
 
 
 dotenv.load_dotenv()
@@ -31,19 +35,19 @@ class Clustering:
     STORE = ""
 
     @classmethod
-    def process(cls, store) -> pd.DataFrame:
+    def process(cls, store, method) -> pd.DataFrame:
         cls.STORE = store
         df = Loader.read("silver", store)
         df = df[~((df["price"] == 0) & (df["old_price"] == 0))]
 
-        embedded_names, embedded_images = cls._get_embeddings(df["name"].tolist(), df["image_url"].tolist())
+        embedded_names, embedded_images = cls._get_embeddings(df["name"].tolist(), df["image_url"].tolist(), method)
         # pca = PCA(n_components=128)
         # embedded_names = pca.fit_transform(embedded_names)
         df["embedded_name"] = embedded_names.tolist()
         # df["embedded_image"] = embedded_images.tolist()
 
         db = DBSCAN(
-            eps=0.05,
+            eps=0.025,
             min_samples=1,
             metric="cosine"
         ).fit(embedded_names)
@@ -80,15 +84,56 @@ class Clustering:
         Loader.load(df, layer="gold", name=cls.STORE)
 
     @classmethod
-    def _get_embeddings(cls, names, image_urls):
+    def _get_embeddings(cls, names, image_urls, method):
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
         names = [
             " ".join([word for word in get_words(name.lower()) if word not in cls.PORTUGUESE_STOPWORDS])
             for name in names
         ]
-        sentence_model = SentenceTransformer("all-mpnet-base-v2", device=device)
-        embedded_names = sentence_model.encode(names, normalize_embeddings=True)
+        
+        if method == 0:
+            tokenizer = AutoTokenizer.from_pretrained("neuralmind/bert-base-portuguese-cased")
+            model = AutoModel.from_pretrained("neuralmind/bert-base-portuguese-cased").to(device)
+            model.eval()
+
+            batch_size = 128
+            embedded_names = []
+
+            for i in range(0, len(names), batch_size):
+                batch = names[i:i+batch_size]
+
+                inputs = tokenizer(
+                    batch,
+                    padding=True,
+                    truncation=True,
+                    max_length=64,
+                    return_tensors="pt"
+                ).to(device)
+
+                with torch.no_grad():
+                    outputs = model(**inputs)
+
+                batch_embeddings = outputs.last_hidden_state.mean(dim=1).cpu().numpy()
+                embedded_names.append(batch_embeddings)
+        elif method == 1:
+            sentence_model = SentenceTransformer("all-mpnet-base-v2", device=device)
+            embedded_names = sentence_model.encode(names, normalize_embeddings=True)
+        else:
+            w2v = Word2Vec.load("data/model/w2v.model")
+            phraser = w2v.phraser
+
+            def get_vector(name):
+                tokens = get_words(name.lower())
+                tokens = phraser[tokens]
+                vectors = [w2v.wv[word] for word in tokens if word in w2v.wv]
+
+                if not vectors:
+                    return np.zeros(w2v.vector_size)
+
+                return np.mean(vectors, axis=0)
+
+            embedded_names = np.array([get_vector(name) for name in names])
 
         # visual_model = timm.create_model("vit_base_patch16_224", pretrained=True)
         # visual_model.eval()
@@ -135,7 +180,7 @@ class Clustering:
 
         # embedded_images = embedded_images.cpu().numpy().tolist()
 
-        return embedded_names, []
+        return np.vstack(embedded_names), []
 
     @classmethod
     def _evaluate_clusters(cls, features, cluster_labels):

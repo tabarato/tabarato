@@ -22,7 +22,7 @@ class Model:
     def train_model(cls) -> str:
         df = Loader.read("silver")
 
-        titles = df["name_without_brand"].dropna().unique().tolist()
+        titles = df["name"].dropna().unique().tolist()
 
         cls._train_model(titles)
 
@@ -88,14 +88,8 @@ class Model:
             threshold=0.3,
             scoring='npmi'
         )
-        trigram = Phrases(
-            bigram[tokenized_titles],
-            min_count=2,
-            threshold=0.2,
-            scoring='npmi'
-        )
         
-        phraser = Phraser(trigram)
+        phraser = Phraser(bigram)
         phrased_titles = []
         for title in phraser[tokenized_titles]:
             phrased_titles.append(title)
