@@ -55,7 +55,6 @@ class PostgresUpserter:
 
             already_exists = False
 
-            # Verifica se já existe pelo menos um store_product para esse produto
             for variation in row["variations"]:
                 for seller in variation["sellers"]:
                     cursor.execute("""
@@ -84,9 +83,8 @@ class PostgresUpserter:
                         already_exists = True
 
             if already_exists:
-                continue  # pula o processamento de similaridade e inserção
+                continue
 
-            # fluxo normal se ainda não existe store_product
             family_id = cls._match_product_family(cursor, embedded_vector, id_brand)
             if not family_id:
                 ignored_products += 1
@@ -107,13 +105,13 @@ class PostgresUpserter:
                 product = products.get((variation["weight"], variation["measure"]), None)
                 if not product:
                     cursor.execute("""
-                        INSERT INTO product (id_product_family, name, embedded_name, weight, measure)
-                        VALUES (%s, %s, %s, %s, %s)
+                        INSERT INTO product (id_product_family, name, weight, measure)
+                        VALUES (%s, %s, %s, %s)
                         RETURNING id
                     """, (
                         family_id,
                         variation["name"],
-                        cls._to_vector(embedded_vector),
+                        # cls._to_vector(embedded_vector),
                         variation["weight"],
                         variation["measure"]
                     ))
@@ -143,7 +141,7 @@ class PostgresUpserter:
         print("Ignored products ", str(ignored_products))
 
     @classmethod
-    def _match_product_family(cls, cursor, embedded_vector, id_brand, similarity_threshold=0.8):
+    def _match_product_family(cls, cursor, embedded_vector, id_brand, similarity_threshold=1.5):
         cursor.execute(
             """
             SELECT id, 1 - (embedded_name <#> %s::vector) AS similarity

@@ -52,10 +52,10 @@
                     "measure": {
                         "type": "keyword"
                     },
-                    "minPrice": {
+                    "min_price": {
                         "type": "float"
                     },
-                    "maxPrice": {
+                    "max_price": {
                         "type": "float"
                     },
                     "image_url": {

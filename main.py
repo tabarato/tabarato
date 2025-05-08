@@ -80,8 +80,17 @@ if __name__ == "__main__":
 
     if step == 5 or step == 0:
         print("Start upserting")
-        df = PostgresUpserter.process(store)
-        PostgresUpserter.load(df)
+        if store == "angeloni" or store == None:
+            df = PostgresUpserter.process("angeloni")
+            PostgresUpserter.load(df)
+ 
+        if store == "bistek" or store == None:
+            df = PostgresUpserter.process("bistek")
+            PostgresUpserter.load(df)
+ 
+        if store == "giassi" or store == None:
+            df = PostgresUpserter.process("giassi")
+            PostgresUpserter.load(df)
 
     if step == 6 or step == 0:
         print("Start loading into ES")
