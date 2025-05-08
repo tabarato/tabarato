@@ -47,7 +47,7 @@ class Clustering:
         # df["embedded_image"] = embedded_images.tolist()
 
         db = DBSCAN(
-            eps=0.025,
+            eps=0.05,
             min_samples=1,
             metric="cosine"
         ).fit(embedded_names)
@@ -93,6 +93,7 @@ class Clustering:
         ]
         
         if method == 0:
+            print("Cluster with BERTimbau")
             tokenizer = AutoTokenizer.from_pretrained("neuralmind/bert-base-portuguese-cased")
             model = AutoModel.from_pretrained("neuralmind/bert-base-portuguese-cased").to(device)
             model.eval()
@@ -117,9 +118,11 @@ class Clustering:
                 batch_embeddings = outputs.last_hidden_state.mean(dim=1).cpu().numpy()
                 embedded_names.append(batch_embeddings)
         elif method == 1:
+            print("Cluster with Sentence Transformer")
             sentence_model = SentenceTransformer("all-mpnet-base-v2", device=device)
             embedded_names = sentence_model.encode(names, normalize_embeddings=True)
         else:
+            print("Cluster with Word2Vec")
             w2v = Word2Vec.load("data/model/w2v.model")
             phraser = w2v.phraser
 
