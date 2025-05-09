@@ -1,4 +1,4 @@
-from tabarato.utils.string_utils import strip_all
+from tabarato.utils.string_utils import get_words, strip_all
 from tabarato.loader import Loader
 import datetime as dt
 import json
@@ -70,29 +70,33 @@ class Transformer(ABC):
         "sache",
         "refil",
         "rf",
-        "super economico",
         "economico",
         "economica",
         "ec",
         "squeeze",
         "sq",
         "tampa",
-        "tp"
+        "tp",
+        "tamanho familia"
     ]
     UNIT = [
         "unidades",
         "unidade",
         "unidadaes",
+        "unid",
         r"un\.",
         "un"
     ]
-    REMOVE_END = [
+    PROMOTION = [
         "gratis",
         r"\d*% de desconto",
         r"\d*% desconto",
         r"ed\. limitada",
         r"ed\. lim",
-        r"ed\. l"
+        r"ed\. l",
+        "super economico",
+        r"(?:\b(?:leve|l)(?:\s*(?:\+|mais|\d+))\s*(?:e\s)?)(?:pague|p)(?:\s*(?:\-|menos|\d+))?",
+        r"leve pague"       
     ]
 
     @classmethod
@@ -113,15 +117,20 @@ class Transformer(ABC):
             abbreviations = json.load(file)
 
         df[["measure", "weight"]] = df.apply(cls._transform_measurement, axis=1)
+        df["brand_name"] = df.apply(cls._transform_brand_name, axis=1)
         df["brand"] = df.apply(cls._transform_brand, axis=1)
         df["name"] = df.apply(lambda row: cls._transform_name(row, abbreviations), axis=1)
-        df[["name", "name_without_brand", "brand_name"]] = df.apply(lambda row: cls._normalize_name_and_brand(row["name"], row["brand"]), axis=1, result_type="expand")
+        df[["name", "name_without_brand", "brand_name"]] = df.apply(lambda row: cls._normalize_name_and_brand(row["name"], row["brand_name"]), axis=1, result_type="expand")
+        df["brand"] = df["brand"].apply(lambda b: "" if b == cls.slug() else b)
+        df["name"] = df.apply(
+            lambda row: row["name_without_brand"] if row["brand"] == "" else row["name"],
+            axis=1
+        )
 
         return df.filter(items=[
             "name", "brand", "ref_id",
             "measure", "weight", "link", "cart_link",
-            "price", "old_price", "description", "details",
-            "image_url"
+            "price", "old_price", "image_url"
         ])
 
     @classmethod
@@ -143,15 +152,14 @@ class Transformer(ABC):
 
         ignore_patterns = [
             r"\b\d+(?:[.,]\d+)?\s*(?:" + "|".join(cls.MEASUREMENT) + r")\b\.?\s*(?:\bcada\b)?", # peso
-            r"(?:\b(?:leve|l)(?:\s*(?:\+|mais|\d))\s*(?:e\s)?)(?:pague|p)(?:\s*(?:\-|menos|\d))?", # leve + pague -
             r"\b(tradicional|trad\.|trad)\b", # tradicional
-            r"\d+%\w+\.?", # percentual
+            # r"\d+%\w+\.?", # percentual
             r"(?<!^)(?:c/|com)?\b(\d+(?:[.,]\d+)?)?\s*(?:" + "|".join(cls.DETAILS) + r")\b\.?\b",
+            r"\b(?:" + "|".join(cls.PROMOTION) + r")",
             r"(?:c/|com)\s*(?:\d+(?:\/\d+)?)(?:\s*(?:" + "|".join(cls.UNIT) + r")\b)?.*", # com X unidades
             r"(?:\d+(?:\/\d+)?)(?:\s*(?:" + "|".join(cls.UNIT) + r")\b).*", # X unidades
             r"\b(?:" + "|".join(cls.UNIT) + r")\b.*", # Unidades
-            r"\+\s*$",
-            r"\.\s*$"
+            r"(?:\+|\.)\s*$"
         ]
 
         for pattern in ignore_patterns:
@@ -167,12 +175,11 @@ class Transformer(ABC):
             r"\bc/(?!\s?\d)": "com ", # c/ -> com
             r"\b\s?/\s?(?!\s?\d)": " e ", # X/Y -> X e Y
             r"(?<!\d)\s*\+\s*": " + ",
+            r"(?<!\d)\.(?!\d)": ". "
         }
 
         for pattern, replacement in replace_patterns.items():
             name = re.sub(pattern, replacement, name, flags=re.IGNORECASE)
-
-        name = re.sub(r"(?<!\d)\.(?!\d)", ". ", name)
 
         for abbr, replacement in abbreviations.items():
             clean_abbr = abbr.rstrip('.').lower()
@@ -191,13 +198,22 @@ class Transformer(ABC):
         return name.title()
 
     @classmethod
+    def _transform_brand_name(cls, row: pd.Series) -> str:
+        brand_name = row["brand"].lower()
+
+        brand_name = unidecode(brand_name)
+        brand_name = strip_all(brand_name)
+        brand_name = re.sub(r"(?<!\d)\.(?!\d)", ". ", brand_name)
+
+        return brand_name.title()
+
+    @classmethod
     def _transform_brand(cls, row: pd.Series) -> str:
         brand = row["brand"]
 
-        brand = brand.replace("'", "")
         brand = unidecode(brand)
         brand = strip_all(brand)
-        brand = brand.replace(" ", "-")
+        brand = "-".join(get_words(brand))
 
         return brand.lower()
 
@@ -330,17 +346,11 @@ class Transformer(ABC):
 
         pattern = re.escape(brand_name).replace(r'\ ', r'\s+')
         match = re.search(pattern, name, flags=re.IGNORECASE)
-
-        remove_end_pattern = r"\b(" + "|".join(cls.REMOVE_END) + r").*$"
-
         if match:
             name_without_brand = (name[:match.start()] + " " + name[match.end():]).strip()
-            name = strip_all(name[:match.end()] + " " + re.sub(remove_end_pattern, "", name[match.end():], flags=re.IGNORECASE))
         else:
             name_without_brand = name
-            name = strip_all(re.sub(remove_end_pattern, "", name, flags=re.IGNORECASE))
 
-        name_without_brand = re.sub(remove_end_pattern, "", name_without_brand, flags=re.IGNORECASE)
         name_without_brand = re.sub(r'\s+', ' ', name_without_brand)
         name_without_brand = remove_duplicate_words(name_without_brand)
 

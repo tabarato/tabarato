@@ -200,25 +200,25 @@ class Clustering:
             print(f"Davies-Bouldin Index: {davies_bouldin_score(features[valid_mask], cluster_labels[valid_mask]):.3f}")
             print(f"Calinski-Harabasz Index: {calinski_harabasz_score(features[valid_mask], cluster_labels[valid_mask]):.3f}")
 
-        tsne = TSNE(n_components=2, random_state=42)
-        reduced = tsne.fit_transform(features)
-        plt.figure(figsize=(14,6))
-        plt.subplot(1,2,1)
-        sns.scatterplot(
-            x=reduced[:,0], 
-            y=reduced[:,1], 
-            hue=cluster_labels,
-            palette='tab20',
-            legend=False
-        )
-        plt.subplot(1,2,2)
-        sns.kdeplot(
-            x=reduced[:,0], 
-            y=reduced[:,1], 
-            cmap='viridis', 
-            fill=True
-        )
-        plt.show()
+        # tsne = TSNE(n_components=2, random_state=42)
+        # reduced = tsne.fit_transform(features)
+        # plt.figure(figsize=(14,6))
+        # plt.subplot(1,2,1)
+        # sns.scatterplot(
+        #     x=reduced[:,0], 
+        #     y=reduced[:,1], 
+        #     hue=cluster_labels,
+        #     palette='tab20',
+        #     legend=False
+        # )
+        # plt.subplot(1,2,2)
+        # sns.kdeplot(
+        #     x=reduced[:,0], 
+        #     y=reduced[:,1], 
+        #     cmap='viridis', 
+        #     fill=True
+        # )
+        # plt.show()
 
     @classmethod
     def _group_variations(cls, row: pd.Series) -> dict:

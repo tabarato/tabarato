@@ -53,7 +53,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     step = int(args.step)
     store = args.store
-    method = args.method
+    method = int(args.method)
 
     all_stores = ["angeloni", "bistek", "giassi"]
     stores_to_process = [store] if store else all_stores
