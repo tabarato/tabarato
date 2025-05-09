@@ -57,13 +57,14 @@ class PostgresLoader:
 
     @classmethod
     def _insert_product_families(cls, df, cursor):
-        product_family = df[["id_brand", "name", "embedded_name"]].drop_duplicates(subset=["name"])
+        product_family = df[["id_brand", "name", "name_without_brand", "embedded_name"]].drop_duplicates(subset=["name"])
 
         product_family_cols = ','.join(product_family.columns)
         product_family_values = [
             (
                 row["id_brand"],
                 row["name"],
+                row["name_without_brand"],
                 cls._to_vector(row["embedded_name"]),
             )
             for _, row in product_family.iterrows()
@@ -89,6 +90,7 @@ class PostgresLoader:
                 product_rows.append((
                     family_id,
                     variation["name"],
+                    variation["name_without_brand"],
                     # cls._to_vector(variation["embedded_name"]),
                     variation["weight"],
                     variation["measure"]

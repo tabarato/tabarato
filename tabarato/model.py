@@ -22,7 +22,7 @@ class Model:
     def train_model(cls) -> str:
         df = Loader.read("silver")
 
-        titles = df["name"].dropna().unique().tolist()
+        titles = df["name_without_brand"].dropna().unique().tolist()
 
         cls._train_model(titles)
 
