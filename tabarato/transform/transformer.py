@@ -121,9 +121,9 @@ class Transformer(ABC):
         df["brand"] = df.apply(cls._transform_brand, axis=1)
         df["name"] = df.apply(lambda row: cls._transform_name(row, abbreviations), axis=1)
         df[["name", "name_without_brand", "brand_name"]] = df.apply(lambda row: cls._normalize_name_and_brand(row["name"], row["brand_name"]), axis=1, result_type="expand")
-        df["brand"] = df["brand"].apply(lambda b: "store-brand" if b == cls.slug() else b)
+        df["brand"] = df["brand"].apply(lambda b: "" if b == cls.slug() else b)
         df["name"] = df.apply(
-            lambda row: row["name_without_brand"] if row["brand"] == "store-brand" else row["name"],
+            lambda row: row["name_without_brand"] if row["brand"] == "" else row["name"],
             axis=1
         )
 

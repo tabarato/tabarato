@@ -17,5 +17,5 @@ class Loader():
 
         directory = pathlib.Path(f"data/{layer}")
         return pd.concat(
-            pd.read_parquet(file) for file in directory.glob("*.parquet", engine="pyarrow")
+            pd.read_parquet(file, engine="pyarrow") for file in directory.glob("*.parquet")
         )
