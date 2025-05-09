@@ -33,13 +33,15 @@ CREATE TABLE product_family (
 	id SERIAL PRIMARY KEY,
 	id_brand SERIAL REFERENCES brand(id),
 	name TEXT,
-	embedded_name vector(768)
+  name_without_brand TEXT,
+	embedded_name vector(150)
 );
 
 CREATE TABLE product (
 	id SERIAL PRIMARY KEY,
 	id_product_family SERIAL REFERENCES product_family(id),
 	name TEXT,
+  name_without_brand TEXT,
   weight INTEGER,
   measure TEXT
 );

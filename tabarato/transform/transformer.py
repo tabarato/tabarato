@@ -130,7 +130,8 @@ class Transformer(ABC):
         return df.filter(items=[
             "name", "brand", "ref_id",
             "measure", "weight", "link", "cart_link",
-            "price", "old_price", "image_url"
+            "price", "old_price", "image_url",
+            "name_without_brand"
         ])
 
     @classmethod

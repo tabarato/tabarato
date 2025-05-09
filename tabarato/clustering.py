@@ -40,7 +40,7 @@ class Clustering:
         df = Loader.read("silver", store)
         df = df[~((df["price"] == 0) & (df["old_price"] == 0))]
 
-        embedded_names, embedded_images = cls._get_embeddings(df["name"].tolist(), df["image_url"].tolist(), method)
+        embedded_names, embedded_images = cls._get_embeddings(df["name_without_brand"].tolist(), df["image_url"].tolist(), method)
         # pca = PCA(n_components=128)
         # embedded_names = pca.fit_transform(embedded_names)
         df["embedded_name"] = embedded_names.tolist()
@@ -54,10 +54,11 @@ class Clustering:
 
         df["cluster"] = db.labels_
 
-        # cls._evaluate_clusters(embedded_names, df["cluster"].values)
+        cls._evaluate_clusters(embedded_names, df["cluster"].values)
 
         df_grouped = df.groupby(["brand", "cluster"]).agg({
             "name": list,
+            "name_without_brand": list,
             "embedded_name": list,
             "store_id": list,
             "weight": list,
@@ -72,6 +73,7 @@ class Clustering:
 
         df_grouped["variations"] = df_grouped.apply(cls._group_variations, axis=1)
         df_grouped["name"] = df_grouped["name"].apply(lambda row: row[0])
+        df_grouped["name_without_brand"] = df_grouped["name_without_brand"].apply(lambda row: row[0])
         df_grouped["embedded_name"] = df_grouped["embedded_name"].apply(lambda row: row[0])
         df_grouped.drop(columns=["weight", "measure", "store_id", "price", "old_price", "link", "cart_link", "image_url", "ref_id"], inplace=True)
 
