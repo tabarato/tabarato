@@ -45,7 +45,7 @@ The ETL pipeline can be run with the following commands:
     - 5: upsert data into PostgreSQL;
     - 6: load data into Elasticsearch.
   - store: the id of the store to execute, executes for all stores if nothing is passed
-- You can only run steps 5 and 6 to test the searching results;
+- You can only run steps 4, 5 and 6 to test the search results.
 
 The frontend can be run with the following commands:
 
