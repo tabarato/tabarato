@@ -32,7 +32,7 @@ class Clustering:
         embedded_names = cls._get_embeddings(df["name"].tolist(), method)
         df["embedded_name"] = embedded_names.tolist()
         db = DBSCAN(
-            eps=0.015,
+            eps=0.01,
             min_samples=1,
             metric="cosine"
         ).fit(embedded_names)

@@ -80,7 +80,8 @@ class Transformer(ABC):
         r"trad\.",
         "trad",
         "uht",
-        "homogeneizado"
+        "homogeneizado",
+        "esterilizado"
     ]
     UNIT = [
         "unidades",
