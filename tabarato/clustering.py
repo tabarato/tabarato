@@ -16,11 +16,8 @@ import dotenv
 import seaborn as sns
 from sentence_transformers import SentenceTransformer
 from transformers import AutoTokenizer, AutoModel
-from PIL import Image
 from io import BytesIO
 import torch
-import torchvision.transforms as transforms
-import timm
 from tqdm import tqdm
 from gensim.models import Word2Vec
 from gensim.models.phrases import Phraser
@@ -137,51 +134,6 @@ class Clustering:
                 return np.mean(vectors, axis=0)
 
             embedded_names = np.array([get_vector(name) for name in names])
-
-        # visual_model = timm.create_model("vit_base_patch16_224", pretrained=True)
-        # visual_model.eval()
-        # visual_model.to(device)
-
-        # if torch.cuda.is_available():
-        #     visual_model = visual_model.cuda()
-
-        # transform = transforms.Compose([
-        #     transforms.Resize((224, 224)),
-        #     transforms.ToTensor(),
-        #     transforms.Normalize(
-        #         mean=[0.485, 0.456, 0.406], 
-        #         std=[0.229, 0.224, 0.225]
-        #     )
-        # ])
-
-        # image_tensors = []
-        # valid_indices = []
-        # for idx, url in enumerate(image_urls):
-        #     try:
-        #         response = requests.get(url, timeout=5)
-        #         image = Image.open(BytesIO(response.content)).convert("RGB")
-        #         image_tensor = transform(image)
-        #         image_tensors.append(image_tensor)
-        #         valid_indices.append(idx)
-        #     except Exception as e:
-        #         print(f"[{idx}] Erro ao embutir imagem: {e}")
-        #         image_tensors.append(None)
-
-        # batch_tensor = []
-        # for img in image_tensors:
-        #     if img is not None:
-        #         batch_tensor.append(img.unsqueeze(0))
-        #     else:
-        #         batch_tensor.append(torch.zeros((1, 3, 224, 224)))
-
-        # batch_tensor = torch.cat(batch_tensor).to(device)
-
-        # with torch.no_grad():
-        #     embedded_images = visual_model(batch_tensor)
-        #     if isinstance(embedded_images, (list, tuple)):
-        #         embedded_images = embedded_images[0]
-
-        # embedded_images = embedded_images.cpu().numpy().tolist()
 
         return np.vstack(embedded_names), []
 
