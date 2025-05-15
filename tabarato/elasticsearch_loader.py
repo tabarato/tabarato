@@ -62,6 +62,7 @@ class ElasticsearchLoader:
                 p.weight,
                 p.measure,
                 pf.id AS product_family_id,
+                pf.name as product_family_name,
                 b.name AS brand
             FROM store_product sp
             JOIN product p ON sp.id_product = p.id
@@ -86,7 +87,7 @@ class ElasticsearchLoader:
 
             if key not in grouped_products:
                 grouped_products[key] = {
-                    "name": record["name"],
+                    "name": record["product_family_name"],
                     "brand": record["brand"],
                     "variations": {}
                 }
