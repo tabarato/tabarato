@@ -12,7 +12,7 @@ export default function ResultPage() {
       <section className="mb-8">
         <h2 className="text-xl font-semibold mb-2">Localização do Usuário:</h2>
         {userLocation ? (
-          <pre className="bg-gray-100 p-4 rounded">
+          <pre className="bg-gray-100 p-4 rounded text-black">
             {JSON.stringify(userLocation, null, 2)}
           </pre>
         ) : (
@@ -23,7 +23,7 @@ export default function ResultPage() {
       <section>
         <h2 className="text-xl font-semibold mb-2">Produtos Selecionados:</h2>
         {cart && cart.length > 0 ? (
-          <pre className="bg-gray-100 p-4 rounded overflow-auto max-h-96">
+          <pre className="bg-gray-100 p-4 rounded overflow-auto max-h-96 text-black">
             {JSON.stringify(cart, null, 2)}
           </pre>
         ) : (
