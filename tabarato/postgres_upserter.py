@@ -146,13 +146,13 @@ class PostgresUpserter:
         print("Ignored products ", str(ignored_products))
 
     @classmethod
-    def _match_product_family(cls, cursor, embedded_vector, id_brand, name, similarity_threshold=0.8):
+    def _match_product_family(cls, cursor, embedded_vector, id_brand, name, similarity_threshold=0.9):
         cursor.execute(
             """
-            SELECT id, 1 - (embedded_name <#> %s::vector) AS similarity
+            SELECT id, 1 - (embedded_name <=> %s::vector) AS similarity
             FROM product_family
-            WHERE id_brand = %s AND name LIKE %s
-            ORDER BY embedded_name <#> %s::vector
+            WHERE id_brand = %s and name like %s
+            ORDER BY embedded_name <=> %s::vector
             LIMIT 1
             """,
             (cls._to_vector(embedded_vector), id_brand, f"{get_words(name)[0]}%", cls._to_vector(embedded_vector))

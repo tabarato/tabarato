@@ -1,26 +1,18 @@
 from .utils.string_utils import get_words
 from .loader import Loader
-import requests
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import nltk
 from nltk.corpus import stopwords
 from sklearn.cluster import DBSCAN
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import silhouette_score, davies_bouldin_score, calinski_harabasz_score
+from sklearn.metrics import silhouette_score, davies_bouldin_score
 from sklearn.manifold import TSNE
-from sklearn.decomposition import PCA
-from gensim.models import Word2Vec
 import dotenv
 import seaborn as sns
 from sentence_transformers import SentenceTransformer
 from transformers import AutoTokenizer, AutoModel
-from io import BytesIO
 import torch
-from tqdm import tqdm
-from gensim.models import Word2Vec
-from gensim.models.phrases import Phraser
 
 
 dotenv.load_dotenv()
@@ -37,21 +29,17 @@ class Clustering:
         df = Loader.read("silver", store)
         df = df[~((df["price"] == 0) & (df["old_price"] == 0))]
 
-        embedded_names, embedded_images = cls._get_embeddings(df["name"].tolist(), df["image_url"].tolist(), method)
-        # pca = PCA(n_components=128)
-        # embedded_names = pca.fit_transform(embedded_names)
+        embedded_names = cls._get_embeddings(df["name"].tolist(), method)
         df["embedded_name"] = embedded_names.tolist()
-        # df["embedded_image"] = embedded_images.tolist()
-
         db = DBSCAN(
-            eps=0.05,
+            eps=0.01,
             min_samples=1,
             metric="cosine"
         ).fit(embedded_names)
 
         df["cluster"] = db.labels_
 
-        # cls._evaluate_clusters(embedded_names, df["cluster"].values)
+        cls._evaluate_clusters(embedded_names, df["cluster"].values)
 
         df_grouped = df.groupby(["brand", "cluster"]).agg({
             "name": list,
@@ -77,11 +65,10 @@ class Clustering:
     @classmethod
     def load(cls, df):
         # df = ti.xcom_pull(task_ids = "process_task")
-
         Loader.load(df, layer="gold", name=cls.STORE)
 
     @classmethod
-    def _get_embeddings(cls, names, image_urls, method):
+    def _get_embeddings(cls, names, method):
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
         names = [
@@ -90,7 +77,7 @@ class Clustering:
         ]
         
         if method == 0:
-            print("Cluster with BERTimbau")
+            print("Cluster with BERT")
             tokenizer = AutoTokenizer.from_pretrained("neuralmind/bert-base-portuguese-cased")
             model = AutoModel.from_pretrained("neuralmind/bert-base-portuguese-cased").to(device)
             model.eval()
@@ -115,27 +102,11 @@ class Clustering:
                 batch_embeddings = outputs.last_hidden_state.mean(dim=1).cpu().numpy()
                 embedded_names.append(batch_embeddings)
         elif method == 1:
-            print("Cluster with Sentence Transformer")
-            sentence_model = SentenceTransformer("all-mpnet-base-v2", device=device)
+            print("Cluster with Sentence-BERT")
+            sentence_model = SentenceTransformer("paraphrase-multilingual-mpnet-base-v2", device=device)
             embedded_names = sentence_model.encode(names, normalize_embeddings=True)
-        else:
-            print("Cluster with Word2Vec")
-            w2v = Word2Vec.load("data/model/w2v.model")
-            phraser = w2v.phraser
 
-            def get_vector(name):
-                tokens = get_words(name.lower())
-                tokens = phraser[tokens]
-                vectors = [w2v.wv[word] for word in tokens if word in w2v.wv]
-
-                if not vectors:
-                    return np.zeros(w2v.vector_size)
-
-                return np.mean(vectors, axis=0)
-
-            embedded_names = np.array([get_vector(name) for name in names])
-
-        return np.vstack(embedded_names), []
+        return np.vstack(embedded_names)
 
     @classmethod
     def _evaluate_clusters(cls, features, cluster_labels):
@@ -150,7 +121,6 @@ class Clustering:
             print(f"\nMetrics on clean data ({np.sum(valid_mask)} points):")
             print(f"Silhouette Score: {silhouette_score(features[valid_mask], cluster_labels[valid_mask]):.3f}")
             print(f"Davies-Bouldin Index: {davies_bouldin_score(features[valid_mask], cluster_labels[valid_mask]):.3f}")
-            print(f"Calinski-Harabasz Index: {calinski_harabasz_score(features[valid_mask], cluster_labels[valid_mask]):.3f}")
 
         # tsne = TSNE(n_components=2, random_state=42)
         # reduced = tsne.fit_transform(features)

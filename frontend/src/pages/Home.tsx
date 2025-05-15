@@ -220,7 +220,7 @@ export default function Home() {
                 {/* Modal do Carrinho */}
                 {isCartOpen && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 text-black">
-                        <div className="bg-white rounded-lg w-24 md:w-auto p-6 relative">
+                        <div className="bg-white rounded-lg md:w-auto p-6 relative">
                             <button
                                 onClick={() => setIsCartOpen(false)}
                                 className="absolute top-3 right-3 btn btn-sm btn-circle "

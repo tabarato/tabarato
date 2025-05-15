@@ -1,13 +1,12 @@
 from tabarato.utils.string_utils import get_words, strip_all
+from tabarato.utils.abbreviations import ABBREVIATIONS
 from tabarato.loader import Loader
-import datetime as dt
-import json
+from datetime import datetime, timezone
 import math
 import re
 import pandas as pd
 from abc import ABC, abstractmethod
 from unidecode import unidecode
-from rapidfuzz import fuzz
 
 
 class Transformer(ABC):
@@ -46,7 +45,6 @@ class Transformer(ABC):
         "frasco",
         "saco",
         "tablete",
-        "barra",
         "cartela",
         "fardo",
         "balde",
@@ -77,7 +75,13 @@ class Transformer(ABC):
         "sq",
         "tampa",
         "tp",
-        "tamanho familia"
+        "tamanho familia",
+        "tradicional",
+        r"trad\.",
+        "trad",
+        "uht",
+        "homogeneizado",
+        "esterilizado"
     ]
     UNIT = [
         "unidades",
@@ -112,20 +116,7 @@ class Transformer(ABC):
     @classmethod
     @abstractmethod
     def transform(cls, df: pd.DataFrame) -> pd.DataFrame:
-        abbreviations = {}
-        with open("data/abbr.json", "r") as file:
-            abbreviations = json.load(file)
-
-        df[["measure", "weight"]] = df.apply(cls._transform_measurement, axis=1)
-        df["brand_name"] = df.apply(cls._transform_brand_name, axis=1)
-        df["brand"] = df.apply(cls._transform_brand, axis=1)
-        df["name"] = df.apply(lambda row: cls._transform_name(row, abbreviations), axis=1)
-        df[["name", "name_without_brand", "brand_name"]] = df.apply(lambda row: cls._normalize_name_and_brand(row["name"], row["brand_name"]), axis=1, result_type="expand")
-        df["brand"] = df["brand"].apply(lambda b: "" if b == cls.slug() else b)
-        df["name"] = df.apply(
-            lambda row: row["name_without_brand"] if row["brand"] == "" else row["name"],
-            axis=1
-        )
+        df[["name", "brand", "measure", "weight"]] = df.apply(cls._transform_row, axis=1, result_type="expand")
 
         return df.filter(items=[
             "name", "brand", "ref_id",
@@ -141,19 +132,26 @@ class Transformer(ABC):
             return
 
         df["store_id"] = cls.id()
-        df["insertedAt"] = dt.datetime.now(dt.timezone.utc)
+        df["inserted_at"] = datetime.now(timezone.utc)
 
         Loader.load(df, layer="silver", name=cls.slug())
-    
+
     @classmethod
-    def _transform_name(cls, row: pd.Series, abbreviations) -> str:
+    def _transform_row(cls, row: pd.Series):
+        measure, weight = cls._transform_measurement(row)
+        brand = cls._transform_brand(row)
+        name = cls._transform_name(row)
+        name, brand = cls._normalize_name_with_store_brand(name, brand)
+
+        return name, brand, measure, weight
+
+    @classmethod
+    def _transform_name(cls, row: pd.Series) -> str:
         name = row["name"].lower()
         name = unidecode(name)
 
         ignore_patterns = [
             r"\b\d+(?:[.,]\d+)?\s*(?:" + "|".join(cls.MEASUREMENT) + r")\b\.?\s*(?:\bcada\b)?", # peso
-            r"\b(tradicional|trad\.|trad)\b", # tradicional
-            # r"\d+%\w+\.?", # percentual
             r"(?<!^)(?:c/|com)?\b(\d+(?:[.,]\d+)?)?\s*(?:" + "|".join(cls.DETAILS) + r")\b\.?\b",
             r"\b(?:" + "|".join(cls.PROMOTION) + r")",
             r"(?:c/|com)\s*(?:\d+(?:\/\d+)?)(?:\s*(?:" + "|".join(cls.UNIT) + r")\b)?.*", # com X unidades
@@ -181,7 +179,7 @@ class Transformer(ABC):
         for pattern, replacement in replace_patterns.items():
             name = re.sub(pattern, replacement, name, flags=re.IGNORECASE)
 
-        for abbr, replacement in abbreviations.items():
+        for abbr, replacement in ABBREVIATIONS.items():
             clean_abbr = abbr.rstrip('.').lower()
             pattern = re.compile(
                 r'(?<!\S)' +
@@ -196,16 +194,6 @@ class Transformer(ABC):
         name = strip_all(name)
 
         return name.title()
-
-    @classmethod
-    def _transform_brand_name(cls, row: pd.Series) -> str:
-        brand_name = row["brand"].lower()
-
-        brand_name = unidecode(brand_name)
-        brand_name = strip_all(brand_name)
-        brand_name = re.sub(r"(?<!\d)\.(?!\d)", ". ", brand_name)
-
-        return brand_name.title()
 
     @classmethod
     def _transform_brand(cls, row: pd.Series) -> str:
@@ -281,77 +269,15 @@ class Transformer(ABC):
         return pd.Series([measure, int(weight)])
 
     @classmethod
-    def _normalize_name_and_brand(cls, name, brand):
-        def remove_duplicate_words(text):
-            words = text.split()
-            seen = set()
-            result = []
-            for word in reversed(words):
-                word_lower = word.lower()
-                if word_lower not in seen:
-                    seen.add(word_lower)
-                    result.insert(0, word)
-            return " ".join(result)
+    def _normalize_name_with_store_brand(cls, name, brand):
+        if brand != cls.slug():
+            return name, brand
 
-        def clean_word(word):
-            return re.sub(r'\W+', '', word).lower()
-
-        def match_brand_name_in_name(name, brand):
-            name_words = name.split()
-            brand_words = brand.replace("-", " ").split()
-
-            n = len(name_words)
-            m = len(brand_words)
-
-            for i in range(n - m + 1):
-                window = name_words[i:i+m]
-                if all(clean_word(w1) == clean_word(w2) for w1, w2 in zip(window, brand_words)):
-                    return " ".join(window)
-
-            return ""
-
-        def fuzzy_substring_match(name: str, brand: str, threshold: int):
-            name = name.lower()
-            brand = brand.lower()
-            length = len(brand)
-
-            best_substr = None
-            best_score = 0
-
-            for window in range(max(1, length - 2), length + 3):
-                for i in range(len(name) - window + 1):
-                    substr = name[i: i + window]
-                    score = fuzz.ratio(substr, brand)
-                    if score > best_score:
-                        best_score = score
-                        best_substr = substr
-
-            if best_score >= threshold:
-                return best_substr.title()
-            return ""
-
-        brand_name = match_brand_name_in_name(name, brand)
-        if not brand_name:
-            brand_parts = brand.split()
-            for part in brand_parts:
-                if part.lower() in name.lower():
-                    brand_name = part.title()
-                    break
-
-        if not brand_name:
-            brand_name = fuzzy_substring_match(name, brand, threshold=80)
-
-        if not brand_name:
-            brand_name = brand.replace("-", " ").title()
-
-        pattern = re.escape(brand_name).replace(r'\ ', r'\s+')
+        pattern = re.escape(brand).replace(r'\ ', r'\s+')
         match = re.search(pattern, name, flags=re.IGNORECASE)
         if match:
-            name_without_brand = (name[:match.start()] + " " + name[match.end():]).strip()
+            name_without_brand = strip_all(name[:match.start()] + " " + name[match.end():])
         else:
             name_without_brand = name
 
-        name_without_brand = re.sub(r'\s+', ' ', name_without_brand)
-        name_without_brand = remove_duplicate_words(name_without_brand)
-
-        return name.title(), name_without_brand.title(), brand_name.title()
+        return name_without_brand.title(), ""
