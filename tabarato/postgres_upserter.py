@@ -54,7 +54,6 @@ class PostgresUpserter:
         for _, row in tqdm(df.iterrows(), total=len(df)):
             embedded_vector = row["embedded_name"]
             id_brand = row["id_brand"]
-            name = row["name"]
 
             already_exists = False
 
@@ -89,7 +88,7 @@ class PostgresUpserter:
             if already_exists:
                 continue
 
-            family_id = cls._match_product_family(cursor, embedded_vector, id_brand, name)
+            family_id = cls._match_product_family(cursor, embedded_vector, id_brand)
             if not family_id:
                 ignored_products += 1
                 continue
@@ -146,16 +145,16 @@ class PostgresUpserter:
         print("Ignored products ", str(ignored_products))
 
     @classmethod
-    def _match_product_family(cls, cursor, embedded_vector, id_brand, name, similarity_threshold=0.8):
+    def _match_product_family(cls, cursor, embedded_vector, id_brand, similarity_threshold=0.9):
         cursor.execute(
             """
-            SELECT id, 1 - (embedded_name <#> %s::vector) AS similarity
+            SELECT id, 1 - (embedded_name <=> %s::vector) AS similarity
             FROM product_family
-            WHERE id_brand = %s AND name LIKE %s
-            ORDER BY embedded_name <#> %s::vector
+            WHERE id_brand = %s
+            ORDER BY embedded_name <=> %s::vector
             LIMIT 1
             """,
-            (cls._to_vector(embedded_vector), id_brand, f"{get_words(name)[0]}%", cls._to_vector(embedded_vector))
+            (cls._to_vector(embedded_vector), id_brand, cls._to_vector(embedded_vector))
         )
         result = cursor.fetchone()
         if result and result[1] >= similarity_threshold:

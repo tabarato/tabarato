@@ -79,6 +79,8 @@ class Transformer(ABC):
         "tradicional",
         r"trad\.",
         "trad",
+        "uht",
+        "homogeneizado"
     ]
     UNIT = [
         "unidades",

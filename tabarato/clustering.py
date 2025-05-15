@@ -32,7 +32,7 @@ class Clustering:
         embedded_names = cls._get_embeddings(df["name"].tolist(), method)
         df["embedded_name"] = embedded_names.tolist()
         db = DBSCAN(
-            eps=0.025,
+            eps=0.015,
             min_samples=1,
             metric="cosine"
         ).fit(embedded_names)
@@ -103,7 +103,7 @@ class Clustering:
                 embedded_names.append(batch_embeddings)
         elif method == 1:
             print("Cluster with Sentence-BERT")
-            sentence_model = SentenceTransformer("all-mpnet-base-v2", device=device)
+            sentence_model = SentenceTransformer("paraphrase-multilingual-mpnet-base-v2", device=device)
             embedded_names = sentence_model.encode(names, normalize_embeddings=True)
 
         return np.vstack(embedded_names)
