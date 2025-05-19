@@ -1,21 +1,7 @@
 ## How to initialize the project:
 
-Create a `.env` file at the root directory with the following values:
-
-```
-BISTEK_PRODUCTS_FROM_CATEGORY_URL="https://www.bistek.com.br/api/catalog_system/pub/products/search/?fq=C:{category_id}&_from={_from}&_to={_to}"
-BISTEK_CATEGORIES_URL="https://www.bistek.com.br/api/catalog_system/pub/category/tree/3/"
-ANGELONI_PRODUCTS_FROM_CATEGORY_URL="https://www.angeloni.com.br/super/api/catalog_system/pub/products/search/?fq=C:{category_id}&_from={_from}&_to={_to}"
-ANGELONI_CATEGORIES_URL="https://www.angeloni.com.br/super/api/catalog_system/pub/category/tree/3/"
-GIASSI_PRODUCTS_FROM_CATEGORY_URL="https://www.giassi.com.br/api/catalog_system/pub/products/search/?fq=C:{category_id}&_from={_from}&_to={_to}"
-GIASSI_CATEGORIES_URL="https://www.giassi.com.br/api/catalog_system/pub/category/tree/3/"
-ELASTICSEARCH_URL="http://localhost:9200"
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
-POSTGRES_DB=tabarato
-DB_ANON_ROLE=anon
-DB_SCHEMA=public
-```
+First you must follow the instructions on where to create the environment variables in the `.env.example` file.
+Contact repository administrators to get environment variable values.
 
 With the environment configured, run the following command:
 
