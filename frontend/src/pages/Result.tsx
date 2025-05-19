@@ -42,6 +42,22 @@ export default function ResultPage() {
     fetchData();
   }, [marketAddresses]);
 
+  function buildVTEXCartLink(buyList: { cart_link: string }[]): string {
+    if (buyList.length === 0) return "#";
+
+    const baseUrl = new URL(buyList[0].cart_link);
+    const params = new URLSearchParams();
+
+    buyList.forEach(item => {
+      const url = new URL(item.cart_link);
+      url.searchParams.forEach((value, key) => {
+        params.append(key, value);
+      });
+    });
+
+    return `${baseUrl.origin}${baseUrl.pathname}?${params.toString()}`;
+  }
+
   return (
     <div className="carousel w-full">
       {/* Slide 1 - Apenas o menor custo sem considerar a localização num único mercado */}
@@ -71,7 +87,7 @@ export default function ResultPage() {
                 </ul>
                 <div className="mt-6">
                   <a
-                    href={storeDataSingle.buy_list[0]?.cart_link}
+                    href={buildVTEXCartLink(storeDataSingle.buy_list)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn btn-primary btn-block"
@@ -116,7 +132,7 @@ export default function ResultPage() {
                     </ul>
                     <div className="mt-2">
                       <a
-                        href={store.buy_list[0].cart_link}
+                        href={buildVTEXCartLink(store.buy_list)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="btn btn-sm btn-outline btn-primary w-full"
