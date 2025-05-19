@@ -39,7 +39,7 @@ CREATE TABLE product_family (
 
 CREATE TABLE product (
 	id SERIAL PRIMARY KEY,
-	id_product_family SERIAL REFERENCES product_family(id),
+	id_product_family SERIAL REFERENCES product_family(id) ON DELETE CASCADE,
 	name TEXT,
   weight INTEGER,
   measure TEXT
@@ -48,7 +48,7 @@ CREATE TABLE product (
 CREATE TABLE store_product (
   id SERIAL PRIMARY KEY,
   id_store SERIAL NOT NULL REFERENCES store(id),
-  id_product SERIAL NOT NULL REFERENCES product(id),
+  id_product SERIAL NOT NULL REFERENCES product(id) ON DELETE CASCADE,
   ref_id INTEGER NOT NULL,
   name TEXT NOT NULL,
   price NUMERIC(10, 4),
