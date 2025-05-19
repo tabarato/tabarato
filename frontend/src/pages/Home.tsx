@@ -1,19 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import axios from 'axios';
 import debounce from 'lodash.debounce';
-import { useCart, generateKey } from '../context/CartContext';
+import { useCart, generateKey, Variation } from '../context/CartContext';
 import { useNavigate } from 'react-router-dom';
-
-
-interface Variation {
-    weight: number;
-    measure: string;
-    name: string;
-    image_url: string;
-    min_price: number;
-    max_price: number;
-    stores: string[];
-}
 
 interface Product {
     id: string;
@@ -29,47 +18,38 @@ export default function Home() {
     const [secretCount, setSecretCount] = useState(0);
     const { cart, addToCart, updateQuantity, removeFromCart } = useCart();
     const [isCartOpen, setIsCartOpen] = useState(false);
+    const [showEmptyCartAlert, setShowEmptyCartAlert] = useState(false);
+    const [selectedTransport, setSelectedTransport] = useState<string | null>(null);
+    const [originAddress, setOriginAddress] = useState('');
+    const [destinationAddress, setDestinationAddress] = useState('');
+    const transportOptions: { label: string; value: string }[] = [
+        { label: 'Bicicleta', value: 'BICYCLE' },
+        { label: 'Carro', value: 'DRIVE' },
+        { label: 'Motocicleta', value: 'TWO_WHEELER' },
+        { label: 'Caminhando', value: 'WALK' },
+    ];
+
+
     const navigate = useNavigate();
 
     const handleCheckout = () => {
-        const cartItems = cart.map((item) => ({
-            product: item, // contém nome, peso, imagem, preços, etc.
+        const products = cart.map((item) => ({
+            product_id: item.product_id,
             quantity: item.quantity,
         }));
 
-        if (!navigator.geolocation) {
-            console.warn("Geolocalização não é suportada neste navegador.");
-            navigate('/result', {
-                state: {
-                    location: null,
-                    cart: cartItems,
-                },
-            });
-            return;
-        }
+        const allStores = cart.flatMap(item => item.stores ?? []);
+        const distinctStores = Array.from(new Set(allStores));
 
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const { latitude, longitude } = position.coords;
-
-                navigate('/result', {
-                    state: {
-                        location: { latitude, longitude },
-                        cart: cartItems,
-                    },
-                });
+        navigate('/result', {
+            state: {
+                originAddress,
+                destinationAddress,
+                travelMode: selectedTransport,
+                products,
+                markets: distinctStores,
             },
-            (error) => {
-                console.warn("Erro ao obter localização:", error.message);
-                navigate('/result', {
-                    state: {
-                        location: null,
-                        cart: cartItems,
-                    },
-                });
-            },
-            { enableHighAccuracy: true, timeout: 10000 }
-        );
+        });
     };
 
     const search = async (searchText: string) => {
@@ -115,7 +95,6 @@ export default function Home() {
     return (
         <div className="min-h-screen bg-base-200 p-8">
             <div className="max-w-3xl mx-auto">
-                {/* Input com contador e botão do carrinho */}
                 <div className="flex items-center justify-between mb-6">
                     <input
                         type="text"
@@ -127,7 +106,14 @@ export default function Home() {
 
                     <button
                         className="relative btn btn-primary"
-                        onClick={() => setIsCartOpen(true)}
+                        onClick={() => {
+                            if (cart.length === 0) {
+                                setShowEmptyCartAlert(true);
+                                setTimeout(() => setShowEmptyCartAlert(false), 3000);
+                                return;
+                            }
+                            setIsCartOpen(true);
+                        }}
                         aria-label="Abrir carrinho"
                     >
                         <svg
@@ -149,6 +135,14 @@ export default function Home() {
                         )}
                     </button>
                 </div>
+
+                {showEmptyCartAlert && (
+                    <div className="toast toast-top toast-end z-50">
+                        <div className="alert alert-warning">
+                            <span>Seu carrinho está vazio.</span>
+                        </div>
+                    </div>
+                )}
 
                 <div className="grid gap-6">
                     {results.map((product) => (
@@ -217,75 +211,122 @@ export default function Home() {
                     )}
                 </div>
 
-                {/* Modal do Carrinho */}
                 {isCartOpen && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 text-black">
-                        <div className="bg-white rounded-lg md:w-auto p-6 relative">
+                        <div className="bg-white rounded-lg w-full max-w-3xl p-8 relative">
                             <button
                                 onClick={() => setIsCartOpen(false)}
-                                className="absolute top-3 right-3 btn btn-sm btn-circle "
+                                className="absolute top-3 right-3 btn btn-sm btn-circle"
                                 aria-label="Fechar modal"
                             >
                                 ✕
                             </button>
-                            <h3 className="text-xl font-bold mb-4">🛒 Seu Carrinho</h3>
+
+                            <h3 className="text-2xl font-bold mb-6">🛒 Seu Carrinho</h3>
+
+                            <div className="mb-4">
+                                <label className="label font-semibold" htmlFor="origin-address">Endereço de origem:</label>
+                                <input
+                                    id="origin-address"
+                                    type="text"
+                                    className="input input-bordered w-full"
+                                    placeholder="Ex: Rua das Flores, 123 - Centro"
+                                    value={originAddress}
+                                    onChange={(e) => setOriginAddress(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="mb-4">
+                                <label className="label font-semibold" htmlFor="destination-address">Endereço de destino:</label>
+                                <input
+                                    id="destination-address"
+                                    type="text"
+                                    className="input input-bordered w-full"
+                                    placeholder="Ex: Av. Brasil, 456 - Bairro"
+                                    value={destinationAddress}
+                                    onChange={(e) => setDestinationAddress(e.target.value)}
+                                />
+                            </div>
+
+
+                            <div className="mt-6 mb-6">
+                                <h4 className="font-semibold mb-2">Escolha o meio de transporte:</h4>
+                                <div className="flex flex-wrap gap-3">
+                                    {transportOptions.map(({ label, value }) => (
+                                        <button
+                                            key={value}
+                                            className={`btn btn-sm ${selectedTransport === value ? 'btn-primary' : 'btn-outline'}`}
+                                            onClick={() => setSelectedTransport(value)}
+                                            type="button"
+                                        >
+                                            {label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
 
                             {cart.length === 0 ? (
                                 <p className="text-center text-gray-500">Seu carrinho está vazio.</p>
                             ) : (
-                                <>
-                                    <ul className="space-y-4 max-h-80 overflow-y-auto">
-                                        {cart.map((item, index) => {
-                                            const key = generateKey(item);
-                                            return (
-                                                <li key={index} className="flex items-center gap-4 border-b pb-2">
-                                                    {item.image_url && (
-                                                        <img
-                                                            src={item.image_url}
-                                                            alt={item.name}
-                                                            className="w-16 h-16 object-contain rounded"
-                                                        />
-                                                    )}
-                                                    <div className="flex-1">
-                                                        <p className="font-semibold">{item.name} {item.weight}{item.measure}</p>
-                                                    </div>
-                                                    <select
-                                                        className="select select-bordered w-16 text-white"
-                                                        value={item.quantity}
-                                                        onChange={(e) =>
-                                                            updateQuantity(key, Number(e.target.value))
-                                                        }
-                                                    >
-                                                        {[...Array(10)].map((_, i) => (
-                                                            <option key={i + 1} value={i + 1}>
-                                                                {i + 1}
-                                                            </option>
-                                                        ))}
-                                                    </select>
+                                <ul className="space-y-4 max-h-80 overflow-y-auto">
+                                    {cart.map((item, index) => {
+                                        const key = generateKey(item);
+                                        return (
+                                            <li key={index} className="flex items-center gap-4 border-b pb-2">
+                                                {item.image_url && (
+                                                    <img
+                                                        src={item.image_url}
+                                                        alt={item.name}
+                                                        className="w-16 h-16 object-contain rounded"
+                                                    />
+                                                )}
+                                                <div className="flex-1">
+                                                    <p className="font-semibold">
+                                                        {item.name} {item.weight}{item.measure}
+                                                    </p>
+                                                </div>
+                                                <select
+                                                    className="select select-bordered w-16 text-white"
+                                                    value={item.quantity}
+                                                    onChange={(e) =>
+                                                        updateQuantity(key, Number(e.target.value))
+                                                    }
+                                                >
+                                                    {[...Array(10)].map((_, i) => (
+                                                        <option key={i + 1} value={i + 1}>
+                                                            {i + 1}
+                                                        </option>
+                                                    ))}
+                                                </select>
 
-                                                    <button
-                                                        onClick={() => removeFromCart(key)}
-                                                        className="btn btn-sm btn-error ml-2"
-                                                        aria-label={`Remover ${item.name} do carrinho`}
-                                                    >
-                                                        Remover
-                                                    </button>
-                                                </li>
-                                            );
-                                        })}
-                                    </ul>
-
-                                    <button
-                                        onClick={handleCheckout}
-                                        className="btn btn-primary mt-6 w-full"
-                                    >
-                                        Obter resultados
-                                    </button>
-                                </>
+                                                <button
+                                                    onClick={() => removeFromCart(key)}
+                                                    className="btn btn-sm btn-error ml-2"
+                                                    aria-label={`Remover ${item.name} do carrinho`}
+                                                >
+                                                    Remover
+                                                </button>
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
                             )}
+
+                            <button
+                                onClick={handleCheckout}
+                                className={`btn mt-6 w-full ${selectedTransport && originAddress.trim() && destinationAddress.trim()
+                                    ? 'btn-primary'
+                                    : 'btn-disabled cursor-not-allowed'
+                                    }`}
+                                disabled={!selectedTransport || !originAddress.trim() || !destinationAddress.trim()}
+                            >
+                                Obter resultados
+                            </button>
                         </div>
                     </div>
                 )}
+
+
             </div>
         </div>
     );
