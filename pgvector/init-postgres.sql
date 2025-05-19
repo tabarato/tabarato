@@ -62,10 +62,10 @@ CREATE TABLE store_product (
 CREATE INDEX idx_product_family_vector ON product_family
 USING ivfflat (embedded_name vector_l2_ops) WITH (lists = 100);
 
-INSERT INTO store (id, name) VALUES
-(1, 'Angeloni', 'angeloni centenario'),
-(2, 'Bistek', 'supermercado bistek avenida centenario'),
-(3, 'Giassi', 'giassi santa barbara');
+INSERT INTO store (id, name, address) VALUES
+(1, 'angeloni', 'angeloni centenario'),
+(2, 'bistek', 'supermercado bistek avenida centenario'),
+(3, 'giassi', 'giassi santa barbara');
 
 CREATE OR REPLACE FUNCTION public.get_minimal_cost_product_list(id_products integer[])
  RETURNS TABLE(store_name text, buy_list json, buy_list_minimal_cost numeric)
