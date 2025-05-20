@@ -5,9 +5,35 @@ import pandas as pd
 import psycopg2
 import dotenv
 from tqdm import tqdm
+from rapidfuzz.distance import Levenshtein
+from rapidfuzz.utils import default_process
 
 
 dotenv.load_dotenv()
+
+def mixed_similarity(str1: str, str2: str, w_lev=0.6, w_jaccard=0.4):
+    if not str1 or not str2:
+        return 0
+
+    str1 = default_process(str1)
+    str2 = default_process(str2)
+
+    lev_score = 100 - Levenshtein.normalized_distance(str1, str2) * 100
+
+    tokens1 = set(get_words(str1.lower()))
+    tokens2 = set(get_words(str2.lower()))
+    jaccard_score = jaccard_similarity(tokens1, tokens2) * 100
+
+    final_score = w_lev * lev_score + w_jaccard * jaccard_score
+    return final_score
+
+def jaccard_similarity(tokens1, tokens2):
+    """Calcula a similaridade de Jaccard entre dois conjuntos"""
+    intersection = tokens1 & tokens2
+    union = tokens1 | tokens2
+    if not union:
+        return 0
+    return len(intersection) / len(union)
 
 class PostgresUpserter:
     POSTGRES_USER = os.getenv("POSTGRES_USER")
@@ -51,10 +77,15 @@ class PostgresUpserter:
         ignored_products = 0
         existent_products = 0
 
+        all_brands = cls._get_all_brands(cursor)
         for _, row in tqdm(df.iterrows(), total=len(df)):
             embedded_vector = row["embedded_name"]
-            id_brand = row["id_brand"]
             name = row["name"]
+
+            id_brand = cls._match_similar_brand(row["brand"], all_brands)
+            if not id_brand:
+                ignored_products += 1
+                continue
 
             already_exists = False
 
@@ -144,6 +175,32 @@ class PostgresUpserter:
         print("New variations in products ", str(new_variations))
         print("Existent products ", str(existent_products))
         print("Ignored products ", str(ignored_products))
+
+    @classmethod
+    def _get_all_brands(cls, cursor):
+        cursor.execute("SELECT id, name FROM brand")
+        return [(bid, name, None) for bid, name in cursor.fetchall()]
+
+    @classmethod
+    def _match_similar_brand(cls, brand, all_brand_vectors, threshold=50):
+        best_score = 0
+        best_id = None
+
+        for bid, bname, _ in all_brand_vectors:
+            if brand == bname:
+                return bid
+
+        for bid, bname, _ in all_brand_vectors:
+            score = mixed_similarity(brand, bname)
+            if score > best_score:
+                best_score = score
+                best_id = bid
+
+        if best_score >= threshold:
+            print(f"{brand} | matched with | {best_id} | score: {best_score:.2f}")
+            return best_id
+
+        return None
 
     @classmethod
     def _match_product_family(cls, cursor, embedded_vector, id_brand, name, similarity_threshold=0.9):
