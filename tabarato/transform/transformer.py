@@ -81,7 +81,8 @@ class Transformer(ABC):
         "trad",
         "uht",
         "homogeneizado",
-        "esterilizado"
+        "esterilizado",
+        "copo"
     ]
     UNIT = [
         "unidades",
@@ -223,11 +224,10 @@ class Transformer(ABC):
             weight = None
             measure = None
 
-        if not weight or not measure or math.isnan(weight) or (measure not in cls.SOLID_MEASUREMENT and measure not in cls.LIQUID_MEASUREMENT and measure not in cls.UNIT):
+        if not weight or not measure or math.isnan(weight) or (measure not in cls.SOLID_MEASUREMENT and measure not in cls.LIQUID_MEASUREMENT):
             name = row["name"]
             solid_match = re.search(fr"(\d+)\s*({'|'.join(cls.SOLID_MEASUREMENT)})", name, re.IGNORECASE)
             liquid_match = re.search(fr"(\d+(?:[.,]\d+)?)\s*({'|'.join(cls.LIQUID_MEASUREMENT)})", name, re.IGNORECASE)
-            unit_match = re.search(fr"(\d+)\s*({'|'.join(cls.UNIT)})", name, re.IGNORECASE)
 
             if solid_match:
                 weight = float(solid_match.group(1))
@@ -235,6 +235,9 @@ class Transformer(ABC):
             elif liquid_match:
                 weight = float(liquid_match.group(1).replace(",", "."))
                 measure = str(liquid_match.group(2)).lower()
+            elif weight and weight > 0 and measure in cls.UNIT:
+                weight = weight
+                measure = "un"
             else:
                 unit_pattern = r"(?:c/|com)\s*(\d+(?:/\d+)?)(?:\s*(?:" + "|".join(cls.UNIT) + r"))?"  
                 unit_match = re.search(unit_pattern, name, re.IGNORECASE)
