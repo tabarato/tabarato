@@ -229,7 +229,7 @@ export default function Home() {
                                 <input
                                     id="origin-address"
                                     type="text"
-                                    className="input input-bordered w-full"
+                                    className="input input-bordered w-full text-white"
                                     placeholder="Ex: Rua das Flores, 123 - Centro"
                                     value={originAddress}
                                     onChange={(e) => setOriginAddress(e.target.value)}
@@ -241,7 +241,7 @@ export default function Home() {
                                 <input
                                     id="destination-address"
                                     type="text"
-                                    className="input input-bordered w-full"
+                                    className="input input-bordered w-full text-white"
                                     placeholder="Ex: Av. Brasil, 456 - Bairro"
                                     value={destinationAddress}
                                     onChange={(e) => setDestinationAddress(e.target.value)}
@@ -268,11 +268,11 @@ export default function Home() {
                             {cart.length === 0 ? (
                                 <p className="text-center text-gray-500">Seu carrinho está vazio.</p>
                             ) : (
-                                <ul className="space-y-4 max-h-80 overflow-y-auto">
+                                <ul className="space-y-2 max-h-80 overflow-y-auto">
                                     {cart.map((item, index) => {
                                         const key = generateKey(item);
                                         return (
-                                            <li key={index} className="flex items-center gap-4 border-b pb-2">
+                                            <li key={index} className="flex items-center gap-2 border-b pb-2">
                                                 {item.image_url && (
                                                     <img
                                                         src={item.image_url}
@@ -286,7 +286,7 @@ export default function Home() {
                                                     </p>
                                                 </div>
                                                 <select
-                                                    className="select select-bordered w-16 text-black"
+                                                    className="select select-bordered w-16 text-white"
                                                     value={item.quantity}
                                                     onChange={(e) =>
                                                         updateQuantity(key, Number(e.target.value))
@@ -301,7 +301,7 @@ export default function Home() {
 
                                                 <button
                                                     onClick={() => removeFromCart(key)}
-                                                    className="btn btn-sm btn-error ml-2"
+                                                    className="btn btn-sm btn-error ml-2 w-16"
                                                     aria-label={`Remover ${item.name} do carrinho`}
                                                 >
                                                     Remover
