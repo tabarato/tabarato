@@ -34,7 +34,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   function addToCart(item: Variation) {
 
-    console.log(item)
     const key = generateKey(item);
 
     setCart((prevCart) => {

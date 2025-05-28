@@ -34,7 +34,7 @@ export default function Home() {
 
     const handleCheckout = () => {
         const products = cart.map((item) => ({
-            product_id: item.product_id,
+            id_product: item.product_id,
             quantity: item.quantity,
         }));
 
@@ -286,7 +286,7 @@ export default function Home() {
                                                     </p>
                                                 </div>
                                                 <select
-                                                    className="select select-bordered w-16 text-white"
+                                                    className="select select-bordered w-16 text-black"
                                                     value={item.quantity}
                                                     onChange={(e) =>
                                                         updateQuantity(key, Number(e.target.value))
