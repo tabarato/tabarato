@@ -197,7 +197,6 @@ class PostgresUpserter:
                 best_id = bid
 
         if best_score >= threshold:
-            print(f"{brand} | matched with | {best_id} | score: {best_score:.2f}")
             return best_id
 
         return None

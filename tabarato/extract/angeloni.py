@@ -21,7 +21,7 @@ class AngeloniExtractor(Extractor):
     def extract(cls) -> pd.DataFrame:
         async def scrap():
             try:
-                async with aiohttp.ClientSession() as session:
+                async with aiohttp.ClientSession(headers={"User-Agent": "Mozilla/5.0"}) as session:
                     categories = await cls._get_categories(session=session)
                     categories = list(set(categories) - set(ANGELONI_EXCLUDED_CATEGORIES))
 
@@ -51,6 +51,7 @@ class AngeloniExtractor(Extractor):
         paths = []
 
         async with session.get(cls.CATEGORIES_URL) as resp:
+            print(resp)
             data = await resp.json(content_type=None)
 
         def append_categories(node: dict, prefix: str) -> None:
