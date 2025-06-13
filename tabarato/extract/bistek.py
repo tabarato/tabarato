@@ -21,7 +21,7 @@ class BistekExtractor(Extractor):
     def extract(cls) -> pd.DataFrame:
         async def scrap():
             try:
-                async with aiohttp.ClientSession() as session:
+                async with aiohttp.ClientSession(headers={"User-Agent": "Mozilla/5.0"}) as session:
                     categories = await cls._get_categories(session=session)
                     categories = list(set(categories) - set(BISTEK_EXCLUDED_CATEGORIES))
 
