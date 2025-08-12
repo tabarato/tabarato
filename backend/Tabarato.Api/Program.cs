@@ -4,7 +4,7 @@ using Elastic.Clients.Elasticsearch;
 using Elastic.Transport;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.OpenApi.Models;
+using Scalar.AspNetCore;
 using Tabarato.Application.Interfaces;
 using Tabarato.Application.Services;
 using Tabarato.Api.Config;
@@ -50,15 +50,6 @@ builder.Services
 
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options =>
-{
-    options.SwaggerDoc("v1", new OpenApiInfo
-    {
-        Version = "v1",
-        Title = "Tabarato API v1",
-        Description = "API documentation for Tabarato v1"
-    });
-});
 builder.Services.AddRouting(options =>
 {
     options.LowercaseUrls = true;
@@ -101,11 +92,16 @@ builder.Services.AddScoped<IStoreService, StoreService>();
 var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
+    var versions = new[] {"v1"};
+    
     app.MapOpenApi();
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
+    app.MapScalarApiReference(options =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Tabarato API v1");
+        options
+            .WithTitle("Tabarato API")
+            .WithLayout(ScalarLayout.Classic)
+            .WithTheme(ScalarTheme.Kepler)
+            .AddDocuments(versions);
     });
 }
 else
@@ -116,6 +112,6 @@ else
 app.UseCors("AllowLocalhost5173");
 app.UseExceptionHandler("/error");
 app.MapControllers();
-app.Map("/", () => Results.Redirect("/swagger"));
+app.Map("/", () => Results.Redirect("/scalar"));
 app.Map("/error", () => Results.Problem("An unexpected error occurred."));
 app.Run();
