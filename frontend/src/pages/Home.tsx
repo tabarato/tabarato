@@ -3,6 +3,9 @@ import axios from 'axios';
 import debounce from 'lodash.debounce';
 import { useCart, generateKey, Variation } from '../context/CartContext';
 import { useNavigate } from 'react-router-dom';
+import getEnvVar from '../utils/EnvironmentVariables';
+
+const API_URL = getEnvVar("API_URL");
 
 interface Product {
     id: string;
@@ -34,7 +37,7 @@ export default function Home() {
 
     const handleCheckout = () => {
         const products = cart.map((item) => ({
-            id_product: item.product_id,
+            productId: item.productId,
             quantity: item.quantity,
         }));
 
@@ -59,25 +62,9 @@ export default function Home() {
         }
 
         try {
-            const response = await axios.post('http://localhost:9200/products/_search', {
-                query: {
-                    bool: {
-                        must: {
-                            multi_match: {
-                                query: searchText,
-                                type: 'most_fields',
-                                fields: ['name^3', 'brand'],
-                            },
-                        },
-                    },
-                },
-            });
-
-            const hits = response.data.hits.hits;
-            const products: Product[] = hits.map((hit: any) => ({
-                id: hit._id,
-                ...hit._source,
-            }));
+            const response = await axios.get(API_URL + `/products?query=${searchText}`);
+            console.log('Resultados da busca:', response.data);
+            const products: Product[] = response.data;
             setResults(products);
         } catch (error) {
             console.error('Erro ao buscar:', error);
@@ -157,18 +144,18 @@ export default function Home() {
 
                             {product.variations.map((variation, idx) => {
                                 const priceDisplay =
-                                    variation.min_price === variation.max_price
-                                        ? `R$${variation.min_price.toFixed(2)}`
-                                        : `R$${variation.min_price.toFixed(2)} - R$${variation.max_price.toFixed(2)}`;
+                                    variation.minPrice === variation.maxPrice
+                                        ? `R$${variation.minPrice.toFixed(2)}`
+                                        : `R$${variation.minPrice.toFixed(2)} - R$${variation.maxPrice.toFixed(2)}`;
 
                                 return (
                                     <div
                                         key={idx}
                                         className="mt-4 pt-4 border-t border-gray-300 flex gap-4"
                                     >
-                                        {variation.image_url && (
+                                        {variation.imageUrl && (
                                             <img
-                                                src={variation.image_url}
+                                                src={variation.imageUrl}
                                                 alt={variation.name}
                                                 className="w-24 h-24 object-contain rounded-xl"
                                             />
@@ -273,9 +260,9 @@ export default function Home() {
                                         const key = generateKey(item);
                                         return (
                                             <li key={index} className="flex items-center gap-2 border-b pb-2">
-                                                {item.image_url && (
+                                                {item.imageUrl && (
                                                     <img
-                                                        src={item.image_url}
+                                                        src={item.imageUrl}
                                                         alt={item.name}
                                                         className="w-16 h-16 object-contain rounded"
                                                     />

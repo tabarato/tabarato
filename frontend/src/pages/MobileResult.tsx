@@ -13,15 +13,15 @@ const originAddress = "Rua Pascoal Meler, 73";
 const destinationAddress = "Rua Domênico Sônego, 542";
 const travelMode = "DRIVE";
 const products = [
-  { "id_product": 975, "quantity": 1 },
-  { "id_product": 3397, "quantity": 2 },
-  { "id_product": 7126, "quantity": 1 },
-  { "id_product": 4061, "quantity": 1 },
-  { "id_product": 6629, "quantity": 1 },
-  { "id_product": 4646, "quantity": 1 },
-  { "id_product": 2506, "quantity": 1 },
-  { "id_product": 7779, "quantity": 1 },
-  { "id_product": 3143, "quantity": 1 }
+  { "product_id": 975, "quantity": 1 },
+  { "product_id": 3397, "quantity": 2 },
+  { "product_id": 7126, "quantity": 1 },
+  { "product_id": 4061, "quantity": 1 },
+  { "product_id": 6629, "quantity": 1 },
+  { "product_id": 4646, "quantity": 1 },
+  { "product_id": 2506, "quantity": 1 },
+  { "product_id": 7779, "quantity": 1 },
+  { "product_id": 3143, "quantity": 1 }
 ];
 const markets = ["giassi", "angeloni", "bistek"];
 
@@ -42,7 +42,7 @@ export default function MobileResultPage() {
     async function fetchData() {
       try {
         const single = await findLowestCostSingleMarket(products);
-        setStoreDataSingle(single[0]);
+        setStoreDataSingle(single);
 
         const split = await findLowestCostAcrossMarkets(products);
         setStoreDataSplit(split);
@@ -63,14 +63,14 @@ export default function MobileResultPage() {
     fetchData();
   }, [marketAddresses]);
 
-  function buildVTEXCartLink(buyList: { cart_link: string }[]): string {
+  function buildVTEXCartLink(buyList: { cartLink: string }[]): string {
     if (buyList.length === 0) return "#";
 
-    const baseUrl = new URL(buyList[0].cart_link);
+    const baseUrl = new URL(buyList[0].cartLink);
     const params = new URLSearchParams();
 
     buyList.forEach(item => {
-      const url = new URL(item.cart_link);
+      const url = new URL(item.cartLink);
       url.searchParams.forEach((value, key) => {
         params.append(key, value);
       });
@@ -120,7 +120,7 @@ export default function MobileResultPage() {
                 <div className="flex items-center gap-2">
                   <div className="h-3 w-3 rounded-full bg-warning"></div>
                   <h2 className="text-lg font-bold capitalize">
-                    Mercado {storeDataSingle.store_name[0].toUpperCase()}
+                    Mercado {storeDataSingle.storeName[0].toUpperCase()}
                   </h2>
                 </div>
               </div>
@@ -136,7 +136,7 @@ export default function MobileResultPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {storeDataSingle.buy_list.map((item, index) => (
+                    {storeDataSingle.items.map((item, index) => (
                       <tr key={index}>
                         <td>{item.name}</td>
                         <td className="text-center">{item.formattedPrice}</td>
@@ -151,16 +151,16 @@ export default function MobileResultPage() {
               <div className="mt-12">
                 <div className="flex justify-end mb-3 pr-2">
                   <span className="text-md font-semibold">
-                    Subtotal: {storeDataSingle.formattedListPrice}
+                    Subtotal: {storeDataSingle.formattedTotalCost}
                   </span>
                 </div>
                 <a
-                  href={buildVTEXCartLink(storeDataSingle.buy_list)}
+                  href={buildVTEXCartLink(storeDataSingle.items)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn btn-sm btn-outline btn-primary w-full"
                 >
-                  Ir ao Carrinho do Mercado {storeDataSingle.store_name[0].toUpperCase()}
+                  Ir ao Carrinho do Mercado {storeDataSingle.storeName[0].toUpperCase()}
                 </a>
               </div>
             </div>
@@ -183,7 +183,7 @@ export default function MobileResultPage() {
                     <div className="flex items-center gap-2">
                       <div className="h-3 w-3 rounded-full bg-primary"></div>
                       <h2 className="text-lg font-bold capitalize">
-                        Mercado {store.store_name[0].toUpperCase()}
+                        Mercado {store.storeName[0].toUpperCase()}
                       </h2>
                     </div>
                   </div>
@@ -199,7 +199,7 @@ export default function MobileResultPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {store.buy_list.map((item, idx) => (
+                        {store.items.map((item, idx) => (
                           <tr key={idx}>
                             <td>{item.name}</td>
                             <td className="text-center">{item.formattedPrice}</td>
@@ -214,16 +214,16 @@ export default function MobileResultPage() {
                   <div className="mt-12">
                     <div className="flex justify-end mb-3 pr-2">
                       <span className="text-md font-semibold">
-                        Subtotal: {store.formattedListPrice}
+                        Subtotal: {store.formattedTotalCost}
                       </span>
                     </div>
                     <a
-                      href={buildVTEXCartLink(store.buy_list)}
+                      href={buildVTEXCartLink(store.items)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="btn btn-sm btn-outline btn-primary w-full"
                     >
-                      Ir ao carrinho do Mercado {store.store_name[0].toUpperCase()}
+                      Ir ao carrinho do Mercado {store.storeName[0].toUpperCase()}
                     </a>
                   </div>
                 </div>
@@ -246,7 +246,7 @@ export default function MobileResultPage() {
                 <div className="flex items-center gap-2">
                   <div className="h-3 w-3 rounded-full bg-success"></div>
                   <h2 className="text-lg font-bold capitalize">
-                    Mercado {bestMarketCombined.store_name[0].toUpperCase()}
+                    Mercado {bestMarketCombined.storeName[0].toUpperCase()}
                   </h2>
                 </div>
               </div>
@@ -262,7 +262,7 @@ export default function MobileResultPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {bestMarketCombined.buy_list.map((item, index) => (
+                    {bestMarketCombined.items.map((item, index) => (
                       <tr key={index}>
                         <td>{item.name}</td>
                         <td className="text-center">{item.formattedPrice}</td>
@@ -275,8 +275,8 @@ export default function MobileResultPage() {
               </div>
 
               <div className="mt-8 flex justify-between text-sm text-gray">
-                <span>{bestMarketCombined.distance_km.toFixed(2)} km até o destino</span>
-                <span>{bestMarketCombined.duration_min} min de trajeto</span>
+                <span>{bestMarketCombined.distanceKm.toFixed(2)} km até o destino</span>
+                <span>{bestMarketCombined.durationMin} min de trajeto</span>
               </div>
 
               <div className="mt-12">
@@ -287,12 +287,12 @@ export default function MobileResultPage() {
                 </div>
 
                 <a
-                  href={buildVTEXCartLink(bestMarketCombined.buy_list)}
+                  href={buildVTEXCartLink(bestMarketCombined.items)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn btn-sm btn-outline btn-primary w-full"
                 >
-                  Ir ao Carrinho do Mercado {bestMarketCombined.store_name[0].toUpperCase()}
+                  Ir ao Carrinho do Mercado {bestMarketCombined.storeName[0].toUpperCase()}
                 </a>
               </div>
             </div>
@@ -315,7 +315,7 @@ export default function MobileResultPage() {
                     <div className="flex items-center gap-2">
                       <div className="h-3 w-3 rounded-full bg-accent"></div>
                       <h2 className="text-lg font-bold capitalize">
-                        Mercado {market.store_name[0].toUpperCase()}
+                        Mercado {market.storeName[0].toUpperCase()}
                       </h2>
                     </div>
                   </div>
@@ -331,7 +331,7 @@ export default function MobileResultPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {market.buy_list.map((item: any, i: number) => (
+                        {market.items.map((item: any, i: number) => (
                           <tr key={i}>
                             <td>{item.name}</td>
                             <td className="text-center">{item.formattedPrice}</td>
@@ -344,8 +344,8 @@ export default function MobileResultPage() {
                   </div>
 
                   <div className="mt-6 flex justify-between text-sm text-gray-600">
-                    <span>{market.distance_km.toFixed(2)} km até o destino</span>
-                    <span>Tempo: {market.duration_min} min de trajeto</span>
+                    <span>{market.distanceKm.toFixed(2)} km até o destino</span>
+                    <span>Tempo: {market.durationMin} min de trajeto</span>
                   </div>
 
                   <div className="mt-8">
@@ -355,12 +355,12 @@ export default function MobileResultPage() {
                       </span>
                     </div>
                     <a
-                      href={buildVTEXCartLink(market.buy_list)}
+                      href={buildVTEXCartLink(market.items)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="btn btn-sm btn-outline btn-primary w-full"
                     >
-                      Ir ao carrinho do Mercado {market.store_name[0].toUpperCase()}
+                      Ir ao carrinho do Mercado {market.storeName[0].toUpperCase()}
                     </a>
                   </div>
                 </div>
@@ -372,7 +372,7 @@ export default function MobileResultPage() {
                     style: "currency",
                     currency: "BRL",
                   }).format(
-                    storeDataSplit.reduce((acc, store) => acc + store.buy_list_minimal_cost, 0)
+                    storeDataSplit.reduce((acc, store) => acc + store.totalCost, 0)
                   )}
                 </span>
               </div>

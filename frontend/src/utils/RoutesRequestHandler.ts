@@ -34,7 +34,11 @@ export interface MarketInfo {
   durationMin: string;
 }
 
-export interface Market { name: string; address: string };
+export interface Market {
+  id: number;
+  name: string;
+  address: string
+};
 
 
 export function extractDistancesAndDurations(
@@ -138,8 +142,8 @@ export async function getSeparateIntermediateRoutesAsObject(
   destination: string,
   intermediates: Market[],
   transport: string
-): Promise<Record<string, { distanceKm: string; durationMin: string }>> {
-  const results: Record<string, { distanceKm: string; durationMin: string }> = {};
+): Promise<Record<number, { distanceKm: string; durationMin: string }>> {
+  const results: Record<number, { distanceKm: string; durationMin: string }> = {};
 
   for (const intermediate of intermediates) {
     const data = {
@@ -174,7 +178,7 @@ export async function getSeparateIntermediateRoutesAsObject(
 
     const marketInfo = extractDistancesAndDurations(routeData, [intermediate.address])[0];
     
-    results[intermediate.name] = {
+    results[intermediate.id] = {
       distanceKm: marketInfo.distanceKm,
       durationMin: marketInfo.durationMin,
     };

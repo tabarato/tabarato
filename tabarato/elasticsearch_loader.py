@@ -31,7 +31,7 @@ class ElasticsearchLoader:
             bulk_request += json.dumps(product) + "\n"
 
         headers = {"Content-Type": "application/json"}
-        response = requests.post(cls.ELASTICSEARCH_URL + "/products/_bulk", data=bulk_request, headers=headers)
+        response = requests.post(cls.ELASTICSEARCH_URL + "/products/_bulk", data=bulk_request, headers=headers, auth=('elastic', 'elastic'), verify=False)
 
         if response.status_code != 200:
             print(response.text)
@@ -56,19 +56,19 @@ class ElasticsearchLoader:
                 sp.link,
                 sp.cart_link,
                 sp.image_url,
-                s.name as store_name,
+                s.slug as store_slug,
                 p.id AS product_id,
                 p.name,
                 p.weight,
                 p.measure,
                 pf.id AS product_family_id,
                 pf.name as product_family_name,
-                b.name AS brand
-            FROM store_product sp
-            JOIN product p ON sp.id_product = p.id
-            JOIN product_family pf ON p.id_product_family = pf.id
-            JOIN brand b ON pf.id_brand = b.id
-            JOIN store s ON sp.id_store = s.id
+                b.slug AS brand
+            FROM store_products sp
+            JOIN products p ON sp.product_id = p.id
+            JOIN product_families pf ON p.product_family_id = pf.id
+            JOIN brands b ON pf.brand_id = b.id
+            JOIN stores s ON sp.store_id = s.id
         """)
         rows = cursor.fetchall()
         colnames = [desc[0] for desc in cursor.description]
@@ -109,7 +109,7 @@ class ElasticsearchLoader:
             if price:
                 product["variations"][variation_key]["prices"].append(price)
 
-            store = record["store_name"]
+            store = record["store_slug"]
             stores = product["variations"][variation_key]["stores"]
             if store and store not in stores:
                 stores.add(store)

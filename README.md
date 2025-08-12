@@ -15,6 +15,12 @@ To remove all data, run the following command:
 docker-compose down --volumes
 ```
 
+After starting the containers, run the migrations to initialize the database schema and apply any pending updates:
+
+```
+dotnet ef database update --project TabaratoApi.Infra --startup-project TabaratoApi
+```
+
 The Python environment should be configured with the following commands:
 
 `python -m venv env .\env\Scripts\activate pip install -r .\requirements.txt`
