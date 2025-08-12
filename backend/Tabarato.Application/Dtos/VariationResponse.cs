@@ -4,7 +4,7 @@ namespace Tabarato.Application.Dtos;
 
 public class VariationResponse
 {
-    public int ProductId { get; set; }
+    public int Id { get; set; }
     public decimal Weight { get; set; }
     public string Measure { get; set; }
     public string Name { get; set; }
@@ -15,7 +15,7 @@ public class VariationResponse
 
     public VariationResponse(DocumentVariation document)
     {
-        ProductId = document.ProductId;
+        Id = document.Id;
         Weight = document.Weight;
         Measure = document.Measure;
         Name = document.Name;

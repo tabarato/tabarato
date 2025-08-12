@@ -4,8 +4,7 @@ namespace Tabarato.Domain.Models;
 
 public class DocumentVariation
 {
-    [JsonPropertyName("product_id")]
-    public int ProductId { get; set; }
+    public int Id { get; set; }
     
     public decimal Weight { get; set; }
     public string Measure { get; set; }

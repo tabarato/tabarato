@@ -6,7 +6,7 @@ using Tabarato.Application.Interfaces;
 namespace Tabarato.Api.Controllers;
 
 [ApiController]
-[Route("v{version:apiVersion}/[controller]s")]
+[Route("v{version:apiVersion}/[controller]")]
 [ApiVersion("1.0")]
 public class CheckoutController(IProductService productService) : ControllerBase
 {

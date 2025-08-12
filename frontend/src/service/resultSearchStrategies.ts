@@ -45,7 +45,7 @@ export function formatPrice(price: number): string {
   });
 }
 
-export async function findBestMarketByCostDistanceTime(products, distances): Promise<StoreResultDistanceTime> {
+export async function findBestMarketByCostDistanceTime(products, distances): Promise<StoreResultDistanceTime | null> {
     const response = await fetch(`${API_URL}/checkout/cheapest-store-with-distance`, {
         method: 'POST',
         headers: {
@@ -59,6 +59,10 @@ export async function findBestMarketByCostDistanceTime(products, distances): Pro
 
     if (!response.ok) {
         throw new Error('Erro ao buscar o melhor mercado por custo/distância/tempo');
+    }
+
+    if (response.status === 204) {
+        return null;
     }
 
     const store: StoreResultDistanceTime = await response.json();
@@ -101,10 +105,8 @@ export async function findMarketsByCostDistanceTime(products, distances): Promis
     }));
 }
 
-export async function findLowestCostSingleMarket(products): Promise<StoreResult> {
-  const url = `${API_URL}/checkout/cheapest-store`;
-
-  const response = await fetch(url, {
+export async function findLowestCostSingleMarket(products): Promise<StoreResult | null> {
+  const response = await fetch(`${API_URL}/checkout/cheapest-store`, {
     method: 'POST',
     headers: defaultHeaders,
     body: JSON.stringify({ products: getProductsRequestBody(products) })
@@ -112,6 +114,10 @@ export async function findLowestCostSingleMarket(products): Promise<StoreResult>
 
   if (!response.ok) {
     throw new Error(`Erro ${response.status}: ${await response.text()}`);
+  }
+
+  if (response.status === 204) {
+      return null;
   }
 
   const store: StoreResult = await response.json();
@@ -126,12 +132,8 @@ export async function findLowestCostSingleMarket(products): Promise<StoreResult>
   };
 }
 
-export async function findLowestCostAcrossMarkets(
-  products
-): Promise<StoreResult[]> {
-  const url = `${API_URL}/checkout/cheapest-items`;
-
-  const response = await fetch(url, {
+export async function findLowestCostAcrossMarkets(products): Promise<StoreResult[]> {
+  const response = await fetch(`${API_URL}/checkout/cheapest-items`, {
     method: 'POST',
     headers: defaultHeaders,
     body: JSON.stringify({ products: getProductsRequestBody(products) })
@@ -199,6 +201,6 @@ export function findMarketsRoutes(
     return { marketAddresses, marketLoading, marketError };
 }
 
-function getProductsRequestBody(products: { productId: string; quantity: number }[]): Record<string, number> {
-  return Object.fromEntries(products.map(p => [p.productId, p.quantity]));
+function getProductsRequestBody(products: any): Record<string, number> {
+  return Object.fromEntries(products.map(p => [p.id, p.quantity]));
 }

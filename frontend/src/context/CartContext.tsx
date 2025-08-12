@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 export interface Variation {
-  productId: BigInteger;
+  id: number;
   weight: number;
   measure: string;
   name: string;
@@ -26,7 +26,7 @@ interface CartContextData {
 const CartContext = createContext<CartContextData | undefined>(undefined);
 
 export function generateKey(item: Variation): string {
-  return `${item.productId}-${item.name}-${item.weight}-${item.measure}`;
+  return `${item.id}-${item.name}-${item.weight}-${item.measure}`;
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {

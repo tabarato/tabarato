@@ -20,11 +20,8 @@ public class StoreCartResponse
         TotalCost = items.Sum(i => i.TotalPrice);
     }
 
-    public static StoreCartResponse Create(IGrouping<int, StoreProductDto> g)
+    public static StoreCartResponse Create(IGrouping<int, CartItemResponse> g)
     {
-        var storeName = g.First().Store.Name;
-        var items = g.Select(CartItemResponse.Create).ToList();
-        
-        return new StoreCartResponse(storeName, items);
+        return new StoreCartResponse(g.First().Store.Name, g.ToList());
     }
 }

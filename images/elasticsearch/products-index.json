@@ -25,6 +25,9 @@
     },
     "mappings": {
         "properties": {
+            "id": {
+                "type": "integer"
+            },
             "name": {
                 "type": "text",
                 "analyzer": "autocomplete",
@@ -38,7 +41,7 @@
             "variations": {
                 "type": "nested",
                 "properties": {
-                    "product_id": {
+                    "id": {
                         "type": "integer"
                     },
                     "name": {

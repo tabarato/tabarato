@@ -13,76 +13,67 @@ public class ProductService(IProductRepository productRepository, ISearchReposit
         return documents.Select(d => new ProductResponse(d)).ToArray();
     }
 
-    public async Task<StoreCartResponse> CalculateCheapestStoreAsync(CalculateCartRequest request)
+    public async Task<StoreCartResponse?> CalculateCheapestStoreAsync(CalculateCartRequest request)
     {
-        var storeProducts = await GetStoreProductDtos(request);
+        var storeProducts = await GetCartItemsResponse(request);
         
         return storeProducts
-            .GroupBy(sp => sp.Store.Id)
+            .GroupBy(cir => cir.Store.Id)
             .Where(HasAllRequestedProducts(request.Products.Keys))
             .Select(StoreCartResponse.Create)
-            .OrderBy(scr => scr.TotalCost)
-            .First();
+            .MinBy(scr => scr.TotalCost);
     }
     
     public async Task<IEnumerable<StoreCartResponse>> CalculateCheapestItemsAsync(CalculateCartRequest request)
     {
-        var storeProducts = await GetStoreProductDtos(request);
+        var storeProducts = await GetCartItemsResponse(request);
         
         return storeProducts
-            .GroupBy(sp => sp.IdProduct)
+            .GroupBy(cir => cir.ProductId)
             .Select(g => g.MinBy(sp => sp.Price)!)
-            .GroupBy(sp => sp.Store.Id)
+            .GroupBy(cir => cir.Store.Id)
             .Select(StoreCartResponse.Create)
             .ToList();
     }
 
-    public async Task<StoreCartWithDistanceResponse> CalculateCheapestStoreWithDistanceAsync(CalculateCartWithDistanceRequest request)
+    public async Task<StoreCartWithDistanceResponse?> CalculateCheapestStoreWithDistanceAsync(CalculateCartWithDistanceRequest request)
     {
-        var storeProducts = await GetStoreProductDtosWithDistance(request);
+        var storeProducts = await GetCartItemsResponse(request);
         
         return storeProducts
-            .GroupBy(sp => sp.Store.Id)
+            .GroupBy(cir => cir.Store.Id)
             .Where(HasAllRequestedProducts(request.Products.Keys))
-            .Select(StoreCartWithDistanceResponse.Create)
+            .Select(g => StoreCartWithDistanceResponse.Create(g, request.Distances[g.First().Store.Id]))
             .OrderBy(scr => scr.TotalCost)
-            .ThenBy(scr => scr.DistanceInfo!.DistanceKm)
-            .ThenBy(scr => scr.DistanceInfo!.DurationMin)
-            .First();
+            .ThenBy(scr => scr.DistanceInfo.DistanceKm)
+            .ThenBy(scr => scr.DistanceInfo.DurationMin)
+            .FirstOrDefault();
     }
 
     public async Task<IEnumerable<StoreCartWithDistanceResponse>> CalculateCheapestStoresRankingWithDistanceAsync(CalculateCartWithDistanceRequest request)
     {
-        var storeProducts = await GetStoreProductDtosWithDistance(request);
+        var storeProducts = await GetCartItemsResponse(request);
 
         return storeProducts
-            .GroupBy(sp => sp.IdProduct)
+            .GroupBy(cir => cir.ProductId)
             .Select(g => g.MinBy(sp => sp.Price)!)
-            .GroupBy(sp => sp.Store.Id)
-            .Select(StoreCartWithDistanceResponse.Create)
+            .GroupBy(cir => cir.Store.Id)
+            .Select(g => StoreCartWithDistanceResponse.Create(g, request.Distances[g.First().Store.Id]))
             .ToList();
     }
     
-    private async Task<IEnumerable<StoreProductDto>> GetStoreProductDtos(CalculateCartRequest request)
+    private async Task<IEnumerable<CartItemResponse>> GetCartItemsResponse(CalculateCartRequest request)
     {
         var storeProducts = await productRepository.GetStoreProductsByProductIds(request.Products.Keys);
-        return storeProducts.Select(sp => StoreProductDto.Create(sp, request.Products[sp.ProductId]));
+        return storeProducts.Select(sp => CartItemResponse.Create(sp, request.Products[sp.ProductId]));
     }
 
-    private async Task<IEnumerable<StoreProductDto>> GetStoreProductDtosWithDistance(CalculateCartWithDistanceRequest request)
-    {
-        var storeProducts = await productRepository.GetStoreProductsByProductIds(request.Products.Keys);
-        return storeProducts.Select(sp =>
-            StoreProductDto.Create(sp, request.Products[sp.ProductId], request.Distances[sp.Store.Id])
-        );
-    }
-
-    private static Func<IGrouping<int, StoreProductDto>, bool> HasAllRequestedProducts(IEnumerable<int> requiredProductIds)
+    private static Func<IGrouping<int, CartItemResponse>, bool> HasAllRequestedProducts(IEnumerable<int> requiredProductIds)
     {
         var required = requiredProductIds.ToHashSet();
         return g =>
         {
-            var storeProductIds = g.Select(p => p.IdProduct).Distinct().ToHashSet();
+            var storeProductIds = g.Select(p => p.ProductId).Distinct().ToHashSet();
             return required.All(pid => storeProductIds.Contains(pid));
         };
     }

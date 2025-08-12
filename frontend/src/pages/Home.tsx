@@ -37,7 +37,7 @@ export default function Home() {
 
     const handleCheckout = () => {
         const products = cart.map((item) => ({
-            productId: item.productId,
+            id: item.id,
             quantity: item.quantity,
         }));
 
@@ -63,7 +63,6 @@ export default function Home() {
 
         try {
             const response = await axios.get(API_URL + `/products?query=${searchText}`);
-            console.log('Resultados da busca:', response.data);
             const products: Product[] = response.data;
             setResults(products);
         } catch (error) {

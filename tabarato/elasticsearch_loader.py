@@ -27,7 +27,7 @@ class ElasticsearchLoader:
 
         bulk_request = ""
         for product in products:
-            bulk_request += '{"index": {}}\n'
+            bulk_request += json.dumps({"index": {"_id": product["id"]}}) + "\n"
             bulk_request += json.dumps(product) + "\n"
 
         headers = {"Content-Type": "application/json"}
@@ -87,6 +87,7 @@ class ElasticsearchLoader:
 
             if key not in grouped_products:
                 grouped_products[key] = {
+                    "id": record["product_family_id"],
                     "name": record["product_family_name"],
                     "brand": record["brand"],
                     "variations": {}
@@ -96,7 +97,7 @@ class ElasticsearchLoader:
 
             if variation_key not in product["variations"]:
                 product["variations"][variation_key] = {
-                    "product_id": record["product_id"],
+                    "id": record["product_id"],
                     "name": record["name"],
                     "weight": int(record["weight"]) if record["weight"] else None,
                     "measure": record["measure"],
