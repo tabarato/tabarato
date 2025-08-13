@@ -6,35 +6,34 @@ using Tabarato.Application.Interfaces;
 namespace Tabarato.Api.Controllers;
 
 [ApiController]
-[Route("v{version:apiVersion}/[controller]")]
+[Route("api/v{version:apiVersion}/[controller]")]
 [ApiVersion("1.0")]
-public class CheckoutController(IProductService productService) : ControllerBase
+public class CheckoutController(IProductService productService, IRoutesService routesService, IStoreService storeService) : ControllerBase
 {
-    [HttpPost("cheapest-store")]
-    public async Task<ActionResult<StoreCartResponse>> CalculateCheapestStore([FromBody] CalculateCartRequest request)
+    [HttpPost]
+    public async Task<ActionResult<CartResponse>> CalculateCart([FromBody] CalculateCartRequest request)
     {
-        var result = await productService.CalculateCheapestStoreAsync(request);
-        return Ok(result);
-    }
+        var stores = await storeService.GetStoresBySlugs(request.Stores);
+        var routes = await routesService.GetSeparateIntermediateRoutesAsync(
+            request.Origin,
+            request.Destination,
+            stores.Select(s => s.Address),
+            request.TravelMode);
+        
+        var distances = Enumerable.Range(0, routes.Length)
+            .ToDictionary(i => stores[i].Id, i => routes[i]);
 
-    [HttpPost("cheapest-items")]
-    public async Task<ActionResult<IEnumerable<StoreCartResponse>>> CalculateCheapestItems([FromBody] CalculateCartRequest request)
-    {
-        var result = await productService.CalculateCheapestItemsAsync(request);
-        return Ok(result);
-    }
+        var cheapestStore = await productService.CalculateCheapestStoreAsync(request.Products);
+        var cheapestItems = await productService.CalculateCheapestItemsAsync(request.Products);
+        var cheapestStoreWithDistance = await productService.CalculateCheapestStoreWithDistanceAsync(request.Products, distances);
+        var cheapestItemsWithDistance = await productService.CalculateCheapestStoresRankingWithDistanceAsync(request.Products, distances);
 
-    [HttpPost("cheapest-store-with-distance")]
-    public async Task<ActionResult<StoreCartResponse>> CalculateCheapestStoreWithDistance([FromBody] CalculateCartWithDistanceRequest request)
-    {
-        var result = await productService.CalculateCheapestStoreWithDistanceAsync(request);
-        return Ok(result);
-    }
+        var result = new CartResponse(
+            cheapestStore,
+            cheapestItems,
+            cheapestStoreWithDistance,
+            cheapestItemsWithDistance);
 
-    [HttpPost("cheapest-stores-ranking-with-distance")]
-    public async Task<ActionResult<IEnumerable<StoreCartResponse>>> CalculateCheapestStoresRankingWithDistance([FromBody] CalculateCartWithDistanceRequest request)
-    {
-        var result = await productService.CalculateCheapestStoresRankingWithDistanceAsync(request);
         return Ok(result);
     }
 }

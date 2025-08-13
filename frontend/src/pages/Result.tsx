@@ -1,13 +1,9 @@
 import { useEffect, useState } from "react";
 import { useLocation } from 'react-router-dom';
 import {
-  findLowestCostSingleMarket,
-  findLowestCostAcrossMarkets,
+  checkout,
   StoreResult,
-  StoreResultDistanceTime,
-  findBestMarketByCostDistanceTime,
-  findMarketsByCostDistanceTime,
-  findMarketsRoutes
+  StoreResultDistanceTime
 } from "../service/resultSearchStrategies";
 
 import InfoLabel from "../utils/InfoLabel";
@@ -22,23 +18,15 @@ export default function ResultPage() {
   const location = useLocation();
   const { originAddress, destinationAddress, travelMode, products, markets } = location.state || {};
 
-  const { marketAddresses } = findMarketsRoutes(originAddress, destinationAddress, markets, travelMode);
-
   useEffect(() => {
     async function fetchData() {
       try {
-        const single = await findLowestCostSingleMarket(products);
-        setStoreDataSingle(single);
+        const cartResponse = await checkout(products, originAddress, destinationAddress, travelMode, markets);
 
-        const split = await findLowestCostAcrossMarkets(products);
-        setStoreDataSplit(split);
-
-        if (marketAddresses) {
-          const bestMarket = await findBestMarketByCostDistanceTime(products, marketAddresses);
-          setBestMarketCombined(bestMarket);
-          const bestMarketsData = await findMarketsByCostDistanceTime(products, marketAddresses);
-          setBestMarkets(bestMarketsData);
-        }
+        setStoreDataSingle(cartResponse.bestSingleStore);
+        setStoreDataSplit(cartResponse.bestPerItemStores);
+        setBestMarketCombined(cartResponse.bestSingleStoreWithDistance);
+        setBestMarkets(cartResponse.bestPerItemStoresWithDistance);
       } catch (err: any) {
         setError(err.message || "Erro ao buscar dados.");
       } finally {
@@ -47,7 +35,7 @@ export default function ResultPage() {
     }
 
     fetchData();
-  }, [marketAddresses]);
+  }, []);
 
   function buildVTEXCartLink(items: { cartLink: string }[]): string {
     if (items.length === 0) return "#";

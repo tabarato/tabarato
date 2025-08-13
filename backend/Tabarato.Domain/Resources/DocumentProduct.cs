@@ -1,4 +1,6 @@
-﻿namespace Tabarato.Domain.Models;
+﻿using Tabarato.Domain.Models;
+
+namespace Tabarato.Domain.Resources;
 
 public class DocumentProduct
 {

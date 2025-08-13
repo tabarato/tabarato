@@ -2,6 +2,7 @@
 using Elastic.Clients.Elasticsearch.QueryDsl;
 using Tabarato.Domain.Models;
 using Tabarato.Domain.Repositories;
+using Tabarato.Domain.Resources;
 
 namespace Tabarato.Infra.Repositories;
 

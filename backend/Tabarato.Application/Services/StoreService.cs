@@ -6,9 +6,9 @@ namespace Tabarato.Application.Services;
 
 public class StoreService(IStoreRepository storeRepository) : IStoreService
 {
-    public async Task<IEnumerable<StoreResponse>> GetStoresBySlugs(IEnumerable<string> slugs)
+    public async Task<StoreResponse[]> GetStoresBySlugs(IEnumerable<string> slugs)
     {
         var stores = await storeRepository.GetStoresBySlugs(slugs);
-        return stores.Select(StoreResponse.Create);
+        return stores.Select(StoreResponse.Create).ToArray();
     }
 }

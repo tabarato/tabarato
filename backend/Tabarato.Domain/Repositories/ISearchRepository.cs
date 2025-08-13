@@ -1,4 +1,5 @@
 ﻿using Tabarato.Domain.Models;
+using Tabarato.Domain.Resources;
 
 namespace Tabarato.Domain.Repositories;
 

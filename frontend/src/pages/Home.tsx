@@ -17,8 +17,6 @@ interface Product {
 export default function Home() {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<Product[]>([]);
-    const [showStores, setShowStores] = useState(false);
-    const [secretCount, setSecretCount] = useState(0);
     const { cart, addToCart, updateQuantity, removeFromCart } = useCart();
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [showEmptyCartAlert, setShowEmptyCartAlert] = useState(false);
@@ -26,10 +24,10 @@ export default function Home() {
     const [originAddress, setOriginAddress] = useState('');
     const [destinationAddress, setDestinationAddress] = useState('');
     const transportOptions: { label: string; value: string }[] = [
-        { label: 'Bicicleta', value: 'BICYCLE' },
-        { label: 'Carro', value: 'DRIVE' },
-        { label: 'Motocicleta', value: 'TWO_WHEELER' },
-        { label: 'Caminhando', value: 'WALK' },
+        { label: 'Bicicleta', value: 'bicycle' },
+        { label: 'Carro', value: 'car' },
+        { label: 'Motocicleta', value: 'motorcycle' },
+        { label: 'Caminhando', value: 'walking' },
     ];
 
 
@@ -62,7 +60,7 @@ export default function Home() {
         }
 
         try {
-            const response = await axios.get(API_URL + `/products?query=${searchText}`);
+            const response = await axios.get(API_URL + `/products/search?query=${searchText}`);
             const products: Product[] = response.data;
             setResults(products);
         } catch (error) {
@@ -165,19 +163,6 @@ export default function Home() {
                                                 {variation.weight} {variation.measure}
                                             </p>
                                             <p className="text-base font-bold mt-1 text-gray-900">{priceDisplay}</p>
-
-                                            {showStores && (
-                                                <div className="flex overflow-x-auto gap-2 mt-3">
-                                                    {variation.stores.map((store, idx) => (
-                                                        <div
-                                                            key={idx}
-                                                            className="bg-blue-50 text-blue-700 text-sm font-semibold px-3 py-1 rounded-full whitespace-nowrap"
-                                                        >
-                                                            🏬 {store}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
 
                                             <button
                                                 onClick={() => addToCart(variation)}
@@ -311,8 +296,6 @@ export default function Home() {
                         </div>
                     </div>
                 )}
-
-
             </div>
         </div>
     );

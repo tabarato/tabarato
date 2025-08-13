@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
 import getEnvVar from '../utils/EnvironmentVariables';
-import { getSeparateIntermediateRoutesAsObject, Market } from "../utils/RoutesRequestHandler"
 
 const API_URL = getEnvVar("API_URL");
 
-const defaultHeaders = {
-  'Content-Type': 'application/json'
+export interface Market {
+  id: number;
+  name: string;
+  address: string
 };
 
 export interface ProductItem {
@@ -16,6 +16,13 @@ export interface ProductItem {
   totalPrice: number;
   quantity?: number;
   formattedTotalPrice?: string;
+}
+
+export interface CartResponse {
+  bestSingleStore: StoreResult | null;
+  bestPerItemStores: StoreResult[];
+  bestSingleStoreWithDistance: StoreResultDistanceTime | null;
+  bestPerItemStoresWithDistance: StoreResultDistanceTime[];
 }
 
 export interface StoreResult {
@@ -38,22 +45,19 @@ export interface DistanceInfo {
   durationMin: number;
 }
 
-export function formatPrice(price: number): string {
-  return price.toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
-  });
-}
 
-export async function findBestMarketByCostDistanceTime(products, distances): Promise<StoreResultDistanceTime | null> {
-    const response = await fetch(`${API_URL}/checkout/cheapest-store-with-distance`, {
+export async function checkout(products, origin, destination, travelMode, stores): Promise<CartResponse> {
+    const response = await fetch(`${API_URL}/checkout`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            products: getProductsRequestBody(products),
-            distances: distances,
+            origin: origin,
+            destination: destination,
+            travelMode: travelMode,
+            stores: stores,
+            products: getProductsRequestBody(products)
         }),
     });
 
@@ -61,146 +65,55 @@ export async function findBestMarketByCostDistanceTime(products, distances): Pro
         throw new Error('Erro ao buscar o melhor mercado por custo/distância/tempo');
     }
 
-    if (response.status === 204) {
-        return null;
-    }
-
-    const store: StoreResultDistanceTime = await response.json();
+    const store: CartResponse = await response.json();
     return {
         ...store,
-        formattedTotalCost: formatPrice(store.totalCost),
-        items: store.items.map(item => ({
-            ...item,
-            formattedPrice: formatPrice(item.price),
-            formattedTotalPrice: formatPrice(item.totalPrice)
+        bestSingleStore: store.bestSingleStore ? {
+            ...store.bestSingleStore,
+            formattedTotalCost: formatPrice(store.bestSingleStore.totalCost),
+            items: store.bestSingleStore.items.map(item => ({
+                ...item,
+                formattedPrice: formatPrice(item.price),
+                formattedTotalPrice: formatPrice(item.totalPrice)
+            }))
+        } : null,
+        bestPerItemStores: store.bestPerItemStores.map(store => ({
+            ...store,
+            formattedTotalCost: formatPrice(store.totalCost),
+            items: store.items.map(item => ({
+                ...item,
+                formattedPrice: formatPrice(item.price),
+                formattedTotalPrice: formatPrice(item.totalPrice)
+            }))
+        })),
+        bestSingleStoreWithDistance: store.bestSingleStoreWithDistance ? {
+            ...store.bestSingleStoreWithDistance,
+            formattedTotalCost: formatPrice(store.bestSingleStoreWithDistance.totalCost),
+            items: store.bestSingleStoreWithDistance.items.map(item => ({
+                ...item,
+                formattedPrice: formatPrice(item.price),
+                formattedTotalPrice: formatPrice(item.totalPrice)
+            }))
+        } : null,
+        bestPerItemStoresWithDistance: store.bestPerItemStoresWithDistance.map(store => ({
+            ...store,
+            formattedTotalCost: formatPrice(store.totalCost),
+            items: store.items.map(item => ({
+                ...item,
+                formattedPrice: formatPrice(item.price),
+                formattedTotalPrice: formatPrice(item.totalPrice)
+            }))
         }))
     };
 }
 
-export async function findMarketsByCostDistanceTime(products, distances): Promise<StoreResultDistanceTime[]> {
-    const response = await fetch(`${API_URL}/checkout/cheapest-stores-ranking-with-distance`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            products: getProductsRequestBody(products),
-            distances: distances,
-        }),
-    });
-
-    if (!response.ok) {
-        throw new Error('Erro ao buscar o melhor mercado por custo/distância/tempo');
-    }
-
-    const stores: StoreResultDistanceTime[] = await response.json();
-    return stores.map(store => ({
-        ...store,
-        formattedTotalCost: formatPrice(store.totalCost),
-        items: store.items.map(item => ({
-            ...item,
-            formattedPrice: formatPrice(item.price),
-            formattedTotalPrice: formatPrice(item.totalPrice)
-        }))
-    }));
-}
-
-export async function findLowestCostSingleMarket(products): Promise<StoreResult | null> {
-  const response = await fetch(`${API_URL}/checkout/cheapest-store`, {
-    method: 'POST',
-    headers: defaultHeaders,
-    body: JSON.stringify({ products: getProductsRequestBody(products) })
-  });
-
-  if (!response.ok) {
-    throw new Error(`Erro ${response.status}: ${await response.text()}`);
-  }
-
-  if (response.status === 204) {
-      return null;
-  }
-
-  const store: StoreResult = await response.json();
-  return {
-      ...store,
-      formattedTotalCost: formatPrice(store.totalCost),
-      items: store.items.map(item => ({
-          ...item,
-          formattedPrice: formatPrice(item.price),
-          formattedTotalPrice: formatPrice(item.totalPrice)
-      }))
-  };
-}
-
-export async function findLowestCostAcrossMarkets(products): Promise<StoreResult[]> {
-  const response = await fetch(`${API_URL}/checkout/cheapest-items`, {
-    method: 'POST',
-    headers: defaultHeaders,
-    body: JSON.stringify({ products: getProductsRequestBody(products) })
-  });
-
-  if (!response.ok) {
-    throw new Error(`Erro ${response.status}: ${await response.text()}`);
-  }
-
-  const stores: StoreResult[] = await response.json();
-  return stores.map(store => ({
-    ...store,
-    formattedTotalCost: formatPrice(store.totalCost),
-    items: store.items.map(item => ({
-      ...item,
-      formattedPrice: formatPrice(item.price),
-      formattedTotalPrice: formatPrice(item.totalPrice)
-    }))
-  }));
-}
-
-export function findMarketsRoutes(
-    origin: string,
-    destination: string,
-    intermediates: string[],
-    transport: string
-): {
-    marketAddresses: Record<number, { distanceKm: string; durationMin: string }> | null;
-    marketLoading: boolean;
-    marketError: string | null;
-} {
-    const [marketAddresses, setMarketAddresses] = useState<Record<string, { distanceKm: string; durationMin: string }> | null>(null);
-    const [marketLoading, setLoading] = useState(true);
-    const [marketError, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        async function fetchAndCalculateRoutes() {
-            if (!origin || !destination || !transport || !intermediates || intermediates.length === 0) {
-                setError("Dados insuficientes para calcular rotas intermediárias.");
-                setLoading(false);
-                return;
-            }
-
-            setLoading(true);
-            setError(null);
-
-            try {
-                const res = await fetch(`${API_URL}/stores?slugs=`+ intermediates.join('&slugs='));
-                if (!res.ok) throw new Error('Erro ao buscar endereços dos mercados');
-                const markets: Market[] = await res.json();
-                if (!markets || markets.length === 0) throw new Error(`Endereços não encontrados para os mercados`);
-
-                const results = await getSeparateIntermediateRoutesAsObject(origin, destination, markets, transport);
-                setMarketAddresses(results);
-            } catch (err: any) {
-                setError(err.message || "Erro desconhecido ao buscar rotas.");
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        fetchAndCalculateRoutes();
-    }, [origin, destination, intermediates, transport]);
-
-    return { marketAddresses, marketLoading, marketError };
-}
-
 function getProductsRequestBody(products: any): Record<string, number> {
   return Object.fromEntries(products.map(p => [p.id, p.quantity]));
+}
+
+function formatPrice(price: number): string {
+  return price.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  });
 }

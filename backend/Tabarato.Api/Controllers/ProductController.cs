@@ -7,11 +7,11 @@ using Tabarato.Application.Interfaces;
 namespace Tabarato.Api.Controllers;
 
 [ApiController]
-[Route("v{version:apiVersion}/[controller]s")]
+[Route("api/v{version:apiVersion}/[controller]s")]
 [ApiVersion("1.0")]
 public class ProductController(IProductService productService) : ControllerBase
 {
-    [HttpGet]
+    [HttpGet("search")]
     public async Task<ActionResult<ProductResponse>> Search([FromQuery, Required] string query)
     {
         var products = await productService.SearchProducts(query);

@@ -1,4 +1,4 @@
-﻿namespace Tabarato.Application.Dtos;
+﻿namespace Tabarato.Domain.Resources;
 
 public class DistanceInfo
 {

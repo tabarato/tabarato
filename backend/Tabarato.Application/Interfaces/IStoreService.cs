@@ -4,5 +4,5 @@ namespace Tabarato.Application.Interfaces;
 
 public interface IStoreService
 {
-    Task<IEnumerable<StoreResponse>> GetStoresBySlugs(IEnumerable<string> slugs);
+    Task<StoreResponse[]> GetStoresBySlugs(IEnumerable<string> slugs);
 }

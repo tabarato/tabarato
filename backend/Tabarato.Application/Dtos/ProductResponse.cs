@@ -1,20 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
-using Tabarato.Domain.Models;
+﻿using Tabarato.Domain.Resources;
 
 namespace Tabarato.Application.Dtos;
 
 public class ProductResponse
 {
-    [Required]
     public int Id { get; set; }
-    
-    [Required]
     public string Brand { get; set; }
-    
-    [Required]
     public string Name { get; set; }
-    
-    [Required]
     public VariationResponse[] Variations { get; set; }
 
     public ProductResponse(DocumentProduct document)

@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Tabarato.Domain.Models;
+namespace Tabarato.Domain.Resources;
 
 public class DocumentVariation
 {

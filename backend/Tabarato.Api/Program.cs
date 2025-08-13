@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Asp.Versioning;
 using DotNetEnv;
 using Elastic.Clients.Elasticsearch;
@@ -7,31 +9,35 @@ using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 using Tabarato.Application.Interfaces;
 using Tabarato.Application.Services;
-using Tabarato.Api.Config;
 using Tabarato.Domain.Repositories;
 using Tabarato.Infra.Persistence;
 using Tabarato.Infra.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
-Env.Load("../../");
+if (builder.Environment.IsDevelopment())
+{
+    Env.Load("../../");
+    builder.Services.AddOpenApi();
+}
 
 builder.Configuration.AddEnvironmentVariables();
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowLocalhost5173", policy =>
+    options.AddPolicy("AllowSpecificOrigin", policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
+        policy.WithOrigins(builder.Configuration["AllowedOrigin"]!)
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
 });
 
 builder.Services
-    .AddControllers(options =>
+    .AddControllers()
+    .AddJsonOptions(options =>
     {
-        options.Conventions.Insert(0, new RoutePrefixConvention(new RouteAttribute("api")));
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
     })
     .ConfigureApiBehaviorOptions(options =>
     {
@@ -48,23 +54,23 @@ builder.Services
         };
     });
 
-builder.Services.AddOpenApi();
-builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddRouting(options =>
 {
     options.LowercaseUrls = true;
 });
-builder.Services.AddApiVersioning(options =>
-{
-    options.DefaultApiVersion = new ApiVersion(1, 0);
-    options.AssumeDefaultVersionWhenUnspecified = true;
-    options.ReportApiVersions = true;
-})
-.AddApiExplorer(options =>
-{
-    options.GroupNameFormat = "'v'VVV";
-    options.SubstituteApiVersionInUrl = true;
-});;
+builder.Services.AddHealthChecks();
+builder.Services
+    .AddApiVersioning(options =>
+    {
+        options.DefaultApiVersion = new ApiVersion(1, 0);
+        options.AssumeDefaultVersionWhenUnspecified = true;
+        options.ReportApiVersions = true;
+    })
+    .AddApiExplorer(options =>
+    {
+        options.GroupNameFormat = "'v'VVV";
+        options.SubstituteApiVersionInUrl = true;
+    });
 
 builder.Services.AddDbContext<TabaratoDbContext>(options =>
     options
@@ -78,14 +84,23 @@ builder.Services.AddSingleton(_ =>
     var settings = new ElasticsearchClientSettings(new Uri(builder.Configuration["ELASTICSEARCH_URL"]!))
         .Authentication(new BasicAuthentication(
             builder.Configuration["ELASTICSEARCH_USERNAME"]!,
-            builder.Configuration["ELASTICSEARCH_PASSWORD"]!))
-        .ServerCertificateValidationCallback(CertificateValidations.AllowAll);
+            builder.Configuration["ELASTICSEARCH_PASSWORD"]!));
+    
+    if (builder.Environment.IsDevelopment())
+        settings = settings.ServerCertificateValidationCallback(CertificateValidations.AllowAll);
     
     return new ElasticsearchClient(settings);
 });
+builder.Services.AddHttpClient<IRoutesRepository, RoutesRepository>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["ROUTES_API_URL"]!);
+    client.DefaultRequestHeaders.Add("X-Goog-Api-Key", builder.Configuration["ROUTES_API_KEY"]!);
+});
+
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<ISearchRepository, SearchRepository>();
 builder.Services.AddScoped<IStoreRepository, StoreRepository>();
+builder.Services.AddScoped<IRoutesService, RoutesService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IStoreService, StoreService>();
 
@@ -99,8 +114,9 @@ if (app.Environment.IsDevelopment())
     {
         options
             .WithTitle("Tabarato API")
-            .WithLayout(ScalarLayout.Classic)
+            .WithLayout(ScalarLayout.Modern)
             .WithTheme(ScalarTheme.Kepler)
+            .WithDarkMode(false)
             .AddDocuments(versions);
     });
 }
@@ -109,8 +125,20 @@ else
     app.UseHttpsRedirection();
 }
 
-app.UseCors("AllowLocalhost5173");
-app.UseExceptionHandler("/error");
+app.UseCors("AllowSpecificOrigin");
+app.UseAuthorization();
+app.UseHealthChecks("/health");
+app.UseExceptionHandler(exApp => 
+{
+    exApp.Run(async context => 
+    {
+        context.Response.StatusCode = 500;
+        await context.Response.WriteAsJsonAsync(new {
+            Error = "An unexpected error occurred"
+        });
+    });
+});
+app.UseAuthorization();
 app.MapControllers();
 app.Map("/", () => Results.Redirect("/scalar"));
 app.Map("/error", () => Results.Problem("An unexpected error occurred."));
