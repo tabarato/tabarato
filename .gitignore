@@ -176,3 +176,56 @@ cython_debug/
 logs/
 
 .idea/
+
+# ============================
+# .NET / C# ignores
+# ============================
+
+# Build results
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Rider / Visual Studio Code / Visual Studio settings
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Test results
+TestResult*/
+[Test]Result.xml
+*.testlog
+
+# NuGet
+*.nupkg
+*.snupkg
+# NuGet Symbol Packages
+*.symbols.nupkg
+# The packages folder can be ignored because of Package Restore
+**/[Pp]ackages/*
+# except build/ folder under packages
+!**/[Pp]ackages/build/
+# Uncomment if you have local nuget sources
+# *.nupkg
+
+# Entity Framework
+Migrations/
+
+# DotCover
+.idea/.dotCover
+
+# Resharper
+_ReSharper*/
+*.DotSettings.user
+
+# ASP.NET Scaffolding
+ScaffoldingReadMe.txt
+
+# Azure
+*.azurePubxml
+*.pubxml
+*.publishproj
+*.publishsettings

@@ -33,7 +33,7 @@ class PostgresLoader:
         cursor = conn.cursor()
         
         brand_map = cls._insert_brands(df, cursor)
-        df["id_brand"] = df["brand"].map(brand_map)
+        df["brand_id"] = df["brand"].map(brand_map)
         
         family_map = cls._insert_product_families(df, cursor)
 
@@ -47,32 +47,32 @@ class PostgresLoader:
     def _insert_brands(cls, df, cursor):
         unique_brands = df["brand"].unique()
         cursor.executemany("""
-            INSERT INTO brand (name)
-            VALUES (%s)
-            ON CONFLICT (name) DO NOTHING
-        """, [(b,) for b in unique_brands])
+            INSERT INTO brands (slug, name)
+            VALUES (%s, %s)
+            ON CONFLICT (slug) DO NOTHING
+        """, [(b,b,) for b in unique_brands])
 
-        cursor.execute("SELECT id, name FROM brand")
-        return {name: bid for bid, name in cursor.fetchall()}
+        cursor.execute("SELECT id, slug FROM brands")
+        return {slug: bid for bid, slug in cursor.fetchall()}
 
     @classmethod
     def _insert_product_families(cls, df, cursor):
-        product_family = df[["id_brand", "name", "embedded_name"]].drop_duplicates(subset=["name"])
+        product_family = df[["brand_id", "name", "embedded_name"]].drop_duplicates(subset=["name"])
 
         product_family_cols = ','.join(product_family.columns)
         product_family_values = [
             (
-                row["id_brand"],
+                row["brand_id"],
                 row["name"],
                 cls._to_vector(row["embedded_name"]),
             )
             for _, row in product_family.iterrows()
         ]
-        product_family_query = f"INSERT INTO product_family ({product_family_cols}) VALUES %s"
+        product_family_query = f"INSERT INTO product_families ({product_family_cols}) VALUES %s"
 
         execute_values(cursor, product_family_query, product_family_values)
 
-        cursor.execute("SELECT id, name FROM product_family")
+        cursor.execute("SELECT id, name FROM product_families")
         return {name: pid for pid, name in cursor.fetchall()}
 
     @classmethod
@@ -97,13 +97,13 @@ class PostgresLoader:
         execute_values(
             cursor,
             """
-            INSERT INTO product (id_product_family, name, weight, measure)
+            INSERT INTO products (product_family_id, name, weight, measure)
             VALUES %s
             """,
             product_rows
         )
 
-        cursor.execute("SELECT id, name, weight, measure FROM product")
+        cursor.execute("SELECT id, name, weight, measure FROM products")
         return {(name, weight, measure): pid for pid, name, weight, measure in cursor.fetchall()}
 
     @classmethod
@@ -135,11 +135,11 @@ class PostgresLoader:
         execute_values(
             cursor,
             """
-            INSERT INTO store_product (
-                id_store, id_product, name,
+            INSERT INTO store_products (
+                store_id, product_id, name,
                 price, old_price, link, cart_link, image_url, ref_id
             ) VALUES %s
-            ON CONFLICT (id_store, id_product) DO NOTHING
+            ON CONFLICT (store_id, product_id) DO NOTHING
             """,
             store_product_rows
         )

@@ -39,7 +39,7 @@ The frontend can be run with the following commands:
 
 ## Routes
 
-* http://localhost:3000 - PostgREST API.
+* http://localhost:5032 - API.
 
 <!-- AIRFLOW_UID="1000"
 AIRFLOW_PROJ_DIR="./src/data"

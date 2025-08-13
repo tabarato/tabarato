@@ -3,6 +3,9 @@ import axios from 'axios';
 import debounce from 'lodash.debounce';
 import { useCart, generateKey, Variation } from '../context/CartContext';
 import { useNavigate } from 'react-router-dom';
+import getEnvVar from '../utils/EnvironmentVariables';
+
+const API_URL = getEnvVar("API_URL");
 
 interface Product {
     id: string;
@@ -14,8 +17,6 @@ interface Product {
 export default function Home() {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<Product[]>([]);
-    const [showStores, setShowStores] = useState(false);
-    const [secretCount, setSecretCount] = useState(0);
     const { cart, addToCart, updateQuantity, removeFromCart } = useCart();
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [showEmptyCartAlert, setShowEmptyCartAlert] = useState(false);
@@ -23,10 +24,10 @@ export default function Home() {
     const [originAddress, setOriginAddress] = useState('');
     const [destinationAddress, setDestinationAddress] = useState('');
     const transportOptions: { label: string; value: string }[] = [
-        { label: 'Bicicleta', value: 'BICYCLE' },
-        { label: 'Carro', value: 'DRIVE' },
-        { label: 'Motocicleta', value: 'TWO_WHEELER' },
-        { label: 'Caminhando', value: 'WALK' },
+        { label: 'Bicicleta', value: 'bicycle' },
+        { label: 'Carro', value: 'car' },
+        { label: 'Motocicleta', value: 'motorcycle' },
+        { label: 'Caminhando', value: 'walking' },
     ];
 
 
@@ -34,7 +35,7 @@ export default function Home() {
 
     const handleCheckout = () => {
         const products = cart.map((item) => ({
-            id_product: item.product_id,
+            id: item.id,
             quantity: item.quantity,
         }));
 
@@ -59,25 +60,8 @@ export default function Home() {
         }
 
         try {
-            const response = await axios.post('http://localhost:9200/products/_search', {
-                query: {
-                    bool: {
-                        must: {
-                            multi_match: {
-                                query: searchText,
-                                type: 'most_fields',
-                                fields: ['name^3', 'brand'],
-                            },
-                        },
-                    },
-                },
-            });
-
-            const hits = response.data.hits.hits;
-            const products: Product[] = hits.map((hit: any) => ({
-                id: hit._id,
-                ...hit._source,
-            }));
+            const response = await axios.get(API_URL + `/products/search?query=${searchText}`);
+            const products: Product[] = response.data;
             setResults(products);
         } catch (error) {
             console.error('Erro ao buscar:', error);
@@ -157,18 +141,18 @@ export default function Home() {
 
                             {product.variations.map((variation, idx) => {
                                 const priceDisplay =
-                                    variation.min_price === variation.max_price
-                                        ? `R$${variation.min_price.toFixed(2)}`
-                                        : `R$${variation.min_price.toFixed(2)} - R$${variation.max_price.toFixed(2)}`;
+                                    variation.minPrice === variation.maxPrice
+                                        ? `R$${variation.minPrice.toFixed(2)}`
+                                        : `R$${variation.minPrice.toFixed(2)} - R$${variation.maxPrice.toFixed(2)}`;
 
                                 return (
                                     <div
                                         key={idx}
                                         className="mt-4 pt-4 border-t border-gray-300 flex gap-4"
                                     >
-                                        {variation.image_url && (
+                                        {variation.imageUrl && (
                                             <img
-                                                src={variation.image_url}
+                                                src={variation.imageUrl}
                                                 alt={variation.name}
                                                 className="w-24 h-24 object-contain rounded-xl"
                                             />
@@ -179,19 +163,6 @@ export default function Home() {
                                                 {variation.weight} {variation.measure}
                                             </p>
                                             <p className="text-base font-bold mt-1 text-gray-900">{priceDisplay}</p>
-
-                                            {showStores && (
-                                                <div className="flex overflow-x-auto gap-2 mt-3">
-                                                    {variation.stores.map((store, idx) => (
-                                                        <div
-                                                            key={idx}
-                                                            className="bg-blue-50 text-blue-700 text-sm font-semibold px-3 py-1 rounded-full whitespace-nowrap"
-                                                        >
-                                                            🏬 {store}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
 
                                             <button
                                                 onClick={() => addToCart(variation)}
@@ -273,9 +244,9 @@ export default function Home() {
                                         const key = generateKey(item);
                                         return (
                                             <li key={index} className="flex items-center gap-2 border-b pb-2">
-                                                {item.image_url && (
+                                                {item.imageUrl && (
                                                     <img
-                                                        src={item.image_url}
+                                                        src={item.imageUrl}
                                                         alt={item.name}
                                                         className="w-16 h-16 object-contain rounded"
                                                     />
@@ -325,8 +296,6 @@ export default function Home() {
                         </div>
                     </div>
                 )}
-
-
             </div>
         </div>
     );

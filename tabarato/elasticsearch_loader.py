@@ -11,7 +11,7 @@ class ElasticsearchLoader:
     POSTGRES_USER = os.getenv("POSTGRES_USER")
     POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
     POSTGRES_DB = os.getenv("POSTGRES_DB")
-    ELASTICSEARCH_URL = os.getenv("ELASTICSEARCH_URL")
+    ELASTICSEARCH_URL = os.getenv("PY_ELASTICSEARCH_URL")
 
     @classmethod
     def process(cls) -> pd.DataFrame:
@@ -27,11 +27,11 @@ class ElasticsearchLoader:
 
         bulk_request = ""
         for product in products:
-            bulk_request += '{"index": {}}\n'
+            bulk_request += json.dumps({"index": {"_id": product["id"]}}) + "\n"
             bulk_request += json.dumps(product) + "\n"
 
         headers = {"Content-Type": "application/json"}
-        response = requests.post(cls.ELASTICSEARCH_URL + "/products/_bulk", data=bulk_request, headers=headers)
+        response = requests.post(cls.ELASTICSEARCH_URL + "/products/_bulk", data=bulk_request, headers=headers, auth=('elastic', 'elastic'), verify=False)
 
         if response.status_code != 200:
             print(response.text)
@@ -56,19 +56,19 @@ class ElasticsearchLoader:
                 sp.link,
                 sp.cart_link,
                 sp.image_url,
-                s.name as store_name,
+                s.slug as store_slug,
                 p.id AS product_id,
                 p.name,
                 p.weight,
                 p.measure,
                 pf.id AS product_family_id,
                 pf.name as product_family_name,
-                b.name AS brand
-            FROM store_product sp
-            JOIN product p ON sp.id_product = p.id
-            JOIN product_family pf ON p.id_product_family = pf.id
-            JOIN brand b ON pf.id_brand = b.id
-            JOIN store s ON sp.id_store = s.id
+                b.slug AS brand
+            FROM store_products sp
+            JOIN products p ON sp.product_id = p.id
+            JOIN product_families pf ON p.product_family_id = pf.id
+            JOIN brands b ON pf.brand_id = b.id
+            JOIN stores s ON sp.store_id = s.id
         """)
         rows = cursor.fetchall()
         colnames = [desc[0] for desc in cursor.description]
@@ -87,6 +87,7 @@ class ElasticsearchLoader:
 
             if key not in grouped_products:
                 grouped_products[key] = {
+                    "id": record["product_family_id"],
                     "name": record["product_family_name"],
                     "brand": record["brand"],
                     "variations": {}
@@ -96,7 +97,7 @@ class ElasticsearchLoader:
 
             if variation_key not in product["variations"]:
                 product["variations"][variation_key] = {
-                    "product_id": record["product_id"],
+                    "id": record["product_id"],
                     "name": record["name"],
                     "weight": int(record["weight"]) if record["weight"] else None,
                     "measure": record["measure"],
@@ -109,7 +110,7 @@ class ElasticsearchLoader:
             if price:
                 product["variations"][variation_key]["prices"].append(price)
 
-            store = record["store_name"]
+            store = record["store_slug"]
             stores = product["variations"][variation_key]["stores"]
             if store and store not in stores:
                 stores.add(store)

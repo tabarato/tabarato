@@ -66,9 +66,9 @@ class PostgresUpserter:
         total = len(df)
         print(f"Starting upserting {str(total)} products")
 
-        cursor.execute("SELECT id, name FROM brand")
-        brand_map = {name: bid for bid, name in cursor.fetchall()}
-        df["id_brand"] = df["brand"].map(brand_map)
+        cursor.execute("SELECT id, slug FROM brands")
+        brand_map = {slug: bid for bid, slug in cursor.fetchall()}
+        df["brand_id"] = df["brand"].map(brand_map)
 
         family_product_cache = {}
 
@@ -82,8 +82,8 @@ class PostgresUpserter:
             embedded_vector = row["embedded_name"]
             name = row["name"]
 
-            id_brand = cls._match_similar_brand(row["brand"], all_brands)
-            if not id_brand:
+            brand_id = cls._match_similar_brand(row["brand"], all_brands)
+            if not brand_id:
                 ignored_products += 1
                 continue
 
@@ -92,8 +92,8 @@ class PostgresUpserter:
             for variation in row["variations"]:
                 for seller in variation["sellers"]:
                     cursor.execute("""
-                        SELECT id_product FROM store_product
-                        WHERE id_store = %s AND ref_id = %s
+                        SELECT product_id FROM store_products
+                        WHERE store_id = %s AND ref_id = %s
                         LIMIT 1
                     """, (seller["store_id"], seller["ref_id"]))
                     result = cursor.fetchone()
@@ -101,14 +101,14 @@ class PostgresUpserter:
                         # Já existe, então atualiza com os novos dados
                         product_id = result[0]
                         cursor.execute("""
-                            UPDATE store_product
+                            UPDATE store_products
                             SET price = %s,
                                 old_price = %s,
                                 name = %s,
                                 link = %s,
                                 cart_link = %s,
                                 image_url = %s
-                            WHERE id_store = %s AND ref_id = %s
+                            WHERE store_id = %s AND ref_id = %s
                         """, (
                             seller["price"], seller["old_price"], variation["name"],
                             seller["link"], seller["cart_link"], variation["image_url"],
@@ -120,15 +120,15 @@ class PostgresUpserter:
             if already_exists:
                 continue
 
-            family_id = cls._match_product_family(cursor, embedded_vector, id_brand, name)
+            family_id = cls._match_product_family(cursor, embedded_vector, brand_id, name)
             if not family_id:
                 ignored_products += 1
                 continue
 
             if family_id not in family_product_cache:
                 cursor.execute("""
-                    SELECT id, weight, measure FROM product
-                    WHERE id_product_family = %s
+                    SELECT id, weight, measure FROM products
+                    WHERE product_family_id = %s
                 """, (family_id,))
                 family_product_cache[family_id] = {
                     (weight, measure): pid for pid, weight, measure in cursor.fetchall()
@@ -140,7 +140,7 @@ class PostgresUpserter:
                 product = products.get((variation["weight"], variation["measure"]), None)
                 if not product:
                     cursor.execute("""
-                        INSERT INTO product (id_product_family, name, weight, measure)
+                        INSERT INTO products (product_family_id, name, weight, measure)
                         VALUES (%s, %s, %s, %s)
                         RETURNING id
                     """, (
@@ -158,11 +158,11 @@ class PostgresUpserter:
 
                 for seller in variation["sellers"]:
                     cursor.execute("""
-                        INSERT INTO store_product (
-                            id_store, id_product, name, price, old_price,
+                        INSERT INTO store_products (
+                            store_id, product_id, name, price, old_price,
                             link, cart_link, image_url, ref_id
                         ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (id_store, id_product) DO UPDATE
+                        ON CONFLICT (store_id, product_id) DO UPDATE
                         SET price = EXCLUDED.price;
                     """, (
                         seller["store_id"], product_id, variation["name"],
@@ -178,7 +178,7 @@ class PostgresUpserter:
 
     @classmethod
     def _get_all_brands(cls, cursor):
-        cursor.execute("SELECT id, name FROM brand")
+        cursor.execute("SELECT id, slug FROM brands")
         return [(bid, name, None) for bid, name in cursor.fetchall()]
 
     @classmethod
@@ -202,16 +202,16 @@ class PostgresUpserter:
         return None
 
     @classmethod
-    def _match_product_family(cls, cursor, embedded_vector, id_brand, name, similarity_threshold=0.9):
+    def _match_product_family(cls, cursor, embedded_vector, brand_id, name, similarity_threshold=0.9):
         cursor.execute(
             """
             SELECT id, 1 - (embedded_name <=> %s::vector) AS similarity
-            FROM product_family
-            WHERE id_brand = %s and name like %s
+            FROM product_families
+            WHERE brand_id = %s and name like %s
             ORDER BY embedded_name <=> %s::vector
             LIMIT 1
             """,
-            (cls._to_vector(embedded_vector), id_brand, f"{get_words(name)[0]}%", cls._to_vector(embedded_vector))
+            (cls._to_vector(embedded_vector), brand_id, f"{get_words(name)[0]}%", cls._to_vector(embedded_vector))
         )
         result = cursor.fetchone()
         if result and result[1] >= similarity_threshold:
