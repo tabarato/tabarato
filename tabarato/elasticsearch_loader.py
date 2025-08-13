@@ -11,7 +11,7 @@ class ElasticsearchLoader:
     POSTGRES_USER = os.getenv("POSTGRES_USER")
     POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
     POSTGRES_DB = os.getenv("POSTGRES_DB")
-    ELASTICSEARCH_URL = os.getenv("ELASTICSEARCH_URL")
+    ELASTICSEARCH_URL = os.getenv("PY_ELASTICSEARCH_URL")
 
     @classmethod
     def process(cls) -> pd.DataFrame:

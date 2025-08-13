@@ -112,6 +112,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.MapScalarApiReference(options =>
     {
+        options.Servers = [];
         options
             .WithTitle("Tabarato API")
             .WithLayout(ScalarLayout.Modern)
@@ -119,6 +120,12 @@ if (app.Environment.IsDevelopment())
             .WithDarkMode(false)
             .AddDocuments(versions);
     });
+
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<TabaratoDbContext>();
+    
+    if (db.Database.CanConnect())
+        db.Database.Migrate();
 }
 else
 {

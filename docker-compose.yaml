@@ -1,26 +1,27 @@
-version: '3'
+version: "3.9"
 
 services:
   db:
     build:
-      context: ./images/postgres
+      context: ./postgres
     container_name: db
     ports:
       - "5432:5432"
-    environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
-      - DB_ANON_ROLE=${DB_ANON_ROLE}
-      - DB_SCHEMA=${DB_SCHEMA}
+    env_file:
+      - .env
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./data:/data
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user"]
+      interval: 5s
+      retries: 5
+      timeout: 5s
 
   elasticsearch:
     build:
-      context: ./images/elasticsearch
+      context: ./elasticsearch
     container_name: elasticsearch
     restart: always
     environment:
@@ -34,13 +35,31 @@ services:
       http.cors.enabled: true
       http.cors.allow-headers: X-Requested-With,X-Auth-Token,Content-Type,Content-Length,Authorization
       http.cors.allow-credentials: true
-      ELASTIC_USERNAME: elastic
-      ELASTIC_PASSWORD: elastic
+      ELASTIC_USERNAME: ${ELASTICSEARCH_USERNAME}
+      ELASTIC_PASSWORD: ${ELASTICSEARCH_PASSWORD}
     ports:
       - "9200:9200"
       - "9300:9300"
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Tabarato.Api/Dockerfile
+    container_name: api
+    environment:
+      - DOTNET_ENVIRONMENT=Development
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_started
+    ports:
+      - "5032:8080"
+      - "5443:443"
 
 volumes:
   postgres_data:
