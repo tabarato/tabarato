@@ -3,6 +3,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 using Tabarato.Application.Dtos;
 using Tabarato.Application.Interfaces;
+using Tabarato.Domain.Resources;
 
 namespace Tabarato.Api.Controllers;
 
@@ -12,9 +13,9 @@ namespace Tabarato.Api.Controllers;
 public class ProductController(IProductService productService) : ControllerBase
 {
     [HttpGet("search")]
-    public async Task<ActionResult<ProductResponse>> Search([FromQuery, Required] string query)
+    public async Task<ActionResult<PagedResponse<ProductResponse>>> Search([FromQuery, Required] string query, [FromQuery] int page = 1)
     {
-        var products = await productService.SearchProducts(query);
+        var products = await productService.SearchProducts(query, page);
         return Ok(products);
     }
 }

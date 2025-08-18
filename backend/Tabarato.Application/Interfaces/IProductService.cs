@@ -5,7 +5,7 @@ namespace Tabarato.Application.Interfaces;
 
 public interface IProductService
 {
-    Task<ProductResponse[]> SearchProducts(string query);
+    Task<PagedResponse<ProductResponse>> SearchProducts(string query, int page);
     Task<CartOfferResponse?> CalculateCheapestStoreAsync(Dictionary<int, int> products);
     Task<CartOfferResponse[]> CalculateCheapestItemsAsync(Dictionary<int, int> products);
     Task<CartOfferWithDistanceResponse?> CalculateCheapestStoreWithDistanceAsync(Dictionary<int, int> products, Dictionary<int, DistanceInfo> distances);
