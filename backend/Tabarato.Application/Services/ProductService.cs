@@ -11,7 +11,7 @@ public class ProductService(IProductRepository productRepository, ISearchReposit
     {
         var documents = await searchRepository.SearchProducts(query, page);
 
-        return new PagedResponse<ProductResponse>(documents.Data.Select(d => new ProductResponse(d)).ToArray(), documents.TotalCount);
+        return new PagedResponse<ProductResponse>(documents.Data.Select(d => (ProductResponse)d).ToArray(), documents.TotalCount);
     }
 
     public async Task<CartOfferResponse?> CalculateCheapestStoreAsync(Dictionary<int, int> products)

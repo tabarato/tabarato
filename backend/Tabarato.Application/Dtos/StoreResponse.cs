@@ -2,15 +2,21 @@
 
 namespace Tabarato.Application.Dtos;
 
-public class StoreResponse(int id, string slug, string name, string address)
+public class StoreResponse
 {
-    public int Id { get; set; } = id;
-    public string Slug { get; set; } = slug;
-    public string Name { get; set; } = name;
-    public string Address { get; set; } = address;
+    public int Id { get; set; }
+    public string Slug { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Address { get; set; } = string.Empty;
 
-    public static StoreResponse Create(Store store)
+    public static implicit operator StoreResponse(Store store)
     {
-        return new StoreResponse(store.Id, store.Slug, store.Name, store.Address);
+        return new StoreResponse
+        {
+            Id = store.Id,
+            Slug = store.Slug,
+            Name = store.Name,
+            Address = store.Address
+        };
     }
 }
