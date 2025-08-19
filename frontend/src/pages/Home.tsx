@@ -61,7 +61,7 @@ export default function Home() {
 
         try {
             const response = await axios.get(API_URL + `/products/search?query=${searchText}`);
-            const products: Product[] = response.data;
+            const products: Product[] = response.data.data;
             setResults(products);
         } catch (error) {
             console.error('Erro ao buscar:', error);

@@ -1,6 +1,5 @@
 ﻿using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.QueryDsl;
-using Tabarato.Domain.Models;
 using Tabarato.Domain.Repositories;
 using Tabarato.Domain.Resources;
 
@@ -8,8 +7,10 @@ namespace Tabarato.Infra.Repositories;
 
 public class SearchRepository(ElasticsearchClient client) : ISearchRepository
 {
-    public async Task<DocumentProduct[]> SearchProducts(string query)
+    public async Task<PagedResponse<DocumentProduct>> SearchProducts(string query, int page)
     {
+        const int PAGE_SIZE = 10;
+        
         var response = await client.SearchAsync<DocumentProduct>("products", request => request
             .Query(q => q
                 .Bool(b => b
@@ -25,8 +26,10 @@ public class SearchRepository(ElasticsearchClient client) : ISearchRepository
                     )
                 )
             )
+            .From((page - 1) * PAGE_SIZE)
+            .Size(PAGE_SIZE)
         );
 
-        return response.Documents.ToArray();
+        return new PagedResponse<DocumentProduct>(response.Documents.ToArray(), response.Total);
     }
 }

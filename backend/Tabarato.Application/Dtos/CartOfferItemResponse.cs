@@ -38,6 +38,6 @@ public class CartOfferItemResponse
     {
         return new CartOfferItemResponse(
             storeProduct.Name, storeProduct.Price, storeProduct.CartLink, quantity,
-            storeProduct.ProductId, StoreResponse.Create(storeProduct.Store));
+            storeProduct.ProductId, storeProduct.Store);
     }
 }

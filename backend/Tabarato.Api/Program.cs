@@ -49,7 +49,7 @@ builder.Services
 
             return new BadRequestObjectResult(new
             {
-                message = string.Join("\n", errors)
+                errors
             });
         };
     });

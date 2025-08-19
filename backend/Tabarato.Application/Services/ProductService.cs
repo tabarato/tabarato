@@ -7,11 +7,11 @@ namespace Tabarato.Application.Services;
 
 public class ProductService(IProductRepository productRepository, ISearchRepository searchRepository) : IProductService
 {
-    public async Task<ProductResponse[]> SearchProducts(string query)
+    public async Task<PagedResponse<ProductResponse>> SearchProducts(string query, int page)
     {
-        var documents = await searchRepository.SearchProducts(query);
+        var documents = await searchRepository.SearchProducts(query, page);
 
-        return documents.Select(d => new ProductResponse(d)).ToArray();
+        return new PagedResponse<ProductResponse>(documents.Data.Select(d => (ProductResponse)d).ToArray(), documents.TotalCount);
     }
 
     public async Task<CartOfferResponse?> CalculateCheapestStoreAsync(Dictionary<int, int> products)
